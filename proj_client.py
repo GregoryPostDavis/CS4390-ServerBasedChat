@@ -1,4 +1,6 @@
 import socket
+import proj_auth
+import proj_encrypt
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -37,8 +39,21 @@ udpsend(udp_socket, server_address, f'HELLO({client_id})')
 response, server_address = udpreceive(udp_socket)
 
 # TODO: authentication
-#   - receive CHALLENGE, respond with RESPONSE
+#   DONE - receive CHALLENGE, respond with RESPONSE
 #   - Generate CK-A key, receive and decrypt the AUTH-SUCCESS message
+
+response, server_address = udpreceive(udp_socket) # RECEIVE CHALLENGE(RAND) FROM SERVER
+challenge_message = response.decode()
+
+res = proj_auth.client_hash(challenge_message, secret_key)
+udpsend(udp_socket, server_address, res) # SENDS RESPONSE(RES) TO SERVER
+
+ck_a = proj_encrypt.cipher_key(challenge_message, secret_key)
+#print("\nCK_A: %s" %(ck_a))
+response, server_address = udpreceive(udp_socket) # RECEIVES AUTH MESSAGE
+response, server_address = udpreceive(udp_socket)
+
+print(proj_encrypt.decrypt_msg(response, ck_a))
 
 # TCP Socket
 TCP_PORT = 5678
