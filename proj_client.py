@@ -1,4 +1,5 @@
 import socket
+import time
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -51,5 +52,14 @@ tcpreceive(tcp_socket)
 
 # TODO: connection
     #   - send CONNECT, receive CONNECTED
+while True:
+    msg = input("Awaiting Message... \n")
+    if msg.lower() == "log off":
+        time.sleep(3)
+        tcp_socket.close()
+        break
+    else:
+        tcpsend(tcp_socket, msg)
+
 
 udp_socket.close()

@@ -1,4 +1,5 @@
 import socket
+import time  # For Debug
 
 def udpsend(udp_socket, client_address, message):
     udp_socket.sendto(message.encode(), client_address)
@@ -63,8 +64,20 @@ if client_id in subscriber_search:
 
     # TODO: connection
         #   - receive CONNECT, send CONNECTED
-
+    looper = True
+    while looper:
+        msg = tcpreceive(client_socket)
+        if msg.lower() == "log off":
+            msg = "filler"
+            time.sleep(10)  # debug
+            looper = False
+            break
+        else:
+            print(msg)
+    tcp_socket.close()
 else:
     print("Client is not in the subscriber list.")
+
+print("you have closed connection")
 
 udp_socket.close()
