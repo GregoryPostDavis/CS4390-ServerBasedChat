@@ -1,5 +1,6 @@
 import socket
-import time
+import proj_auth
+import proj_encrypt
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -37,14 +38,33 @@ udpsend(udp_socket, server_address, f'HELLO({client_id})')
 response, server_address = udpreceive(udp_socket)
 
 # TODO: authentication
-#   - receive CHALLENGE, respond with RESPONSE
-#   - Generate CK-A key, receive and decrypt the AUTH-SUCCESS message
+#   DONE - receive CHALLENGE, respond with RESPONSE
+#   DONE - Generate CK-A key, receive and decrypt the AUTH-SUCCESS message
 
+response, server_address = udpreceive(udp_socket)               # RECEIVE CHALLENGE(RAND) FROM SERVER
+challenge_message = response.decode()
+
+res = proj_auth.client_hash(challenge_message, secret_key)
+udpsend(udp_socket, server_address, res)                        # SENDS RESPONSE(RES) TO SERVER
+
+ck_a = proj_encrypt.cipher_key(challenge_message, secret_key)
+#print("\nCK_A: %s" %(ck_a))                                    # - DEBUG
+response, server_address = udpreceive(udp_socket)               # RECEIVES AUTH MESSAGE
+response, server_address = udpreceive(udp_socket)
+
+print(proj_encrypt.decrypt_msg(response, ck_a))                 # DECRYPTS MESSAGE <RAND_COOCKIE & TCP_PORT #>
+
+rand_cookie = (proj_encrypt.decrypt_msg(response, ck_a)[:-5])   # EXTRACTS RAND_COOKIE
+tcp_port_num = (proj_encrypt.decrypt_msg(response, ck_a)[11:])  # EXTRRACTS TCP_PORT #
+
+print("\nRand_Cookie: ", rand_cookie)                           # - DEBUG
+print("TCP Port Numer: ", tcp_port_num)                         # - DEBUG
+ 
 # TCP Socket
 TCP_PORT = 5678
-tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # AF_INET: internet, SOCK_STREAM: TCP
+tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET: internet, SOCK_STREAM: TCP
 tcp_socket.connect((IP, TCP_PORT))
-print("\n* TCP socket created\n")  # debug
+print("\n* TCP socket created\n")                               # - DEBUG
 
 # CONNECT
 rand_cookie = 0
