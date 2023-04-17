@@ -13,11 +13,11 @@ def udpreceive(udp_socket):
 
 def tcpsend(client_socket, message):
     print("You: " + message)
-    client_socket.send(message.encode('utf-8')) # TODO: the encoding will be replaced with CK-A
+    client_socket.send(message.encode()) # TODO: the encoding will be replaced with CK-A
 
-def tcpreceive(client_socket):
+def tcpreceive(client_socket, client_id):
     message = client_socket.recv(1024).decode()
-    print("Client: " + message) # buffer size not that important, if it goes over it will be saved
+    print(f"{client_id}: " + message) # buffer size not that important, if it goes over it will be saved
     return message
 
 #####################################################
@@ -57,27 +57,25 @@ if client_id in subscriber_search:
     tcp_socket.listen()
 
     client_socket, address = tcp_socket.accept() # Returns client socket and address
-    print("\n* TCP socket bound to %s" %(TCP_PORT))
+    print("\n* TCP socket bound to %s\n" %(TCP_PORT))
 
-    tcpreceive(client_socket)
-    tcpsend(client_socket, "Hello Client!")
+    # CONNECT
+    rand_cookie = 0
+    message = tcpreceive(client_socket, client_id)
+    if str(rand_cookie) == message[8:-1]:
+        tcpsend(client_socket, "CONNECTED\n")
 
-    # TODO: connection
-        #   - receive CONNECT, send CONNECTED
-    looper = True
-    while looper:
-        msg = tcpreceive(client_socket)
-        if msg.lower() == "log off":
-            msg = "filler"
-            time.sleep(10)  # debug
-            looper = False
+
+    while True:
+        msg = tcpreceive(client_socket, client_id)
+        if msg.strip().lower() == "log off":
+            print("logging off...")
             break
-        else:
-            print(msg)
+    client_socket.close()
     tcp_socket.close()
+    print("* TCP connection closed.")
 else:
-    print("Client is not in the subscriber list.")
-
-print("you have closed connection")
+    print("* Client is not in the subscriber list.")
 
 udp_socket.close()
+print("* UDP connection closed.")

@@ -21,8 +21,8 @@ def tcpreceive(tcp_socket):
 #####################################################
 
 # predefine values
-client_id = 'clientA'  # hardcoded client ID: has to be in subscribed users list
-secret_key = 100
+client_id = 'clientC'  # hardcoded client ID: has to be in subscribed users list
+secret_key = 300
 
 IP = "127.0.0.1"
 UDP_PORT = 1234
