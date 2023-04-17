@@ -1,5 +1,6 @@
 import socket
 import time  # For Debug
+from datetime import datetime
 
 def udpsend(udp_socket, client_address, message):
     udp_socket.sendto(message.encode(), client_address)
@@ -65,12 +66,20 @@ if client_id in subscriber_search:
     if str(rand_cookie) == message[8:-1]:
         tcpsend(client_socket, "CONNECTED\n")
 
+    now = datetime.now()
+
+    fName = now.strftime("%H.%M.%S.txt")
+    f = open(fName, 'a')
 
     while True:
         msg = tcpreceive(client_socket, client_id)
         if msg.strip().lower() == "log off":
             print("logging off...")
             break
+        else:
+            strToWrite = client_id + ": " + msg
+            f.write(strToWrite)
+            f.write("\n")
     client_socket.close()
     tcp_socket.close()
     print("* TCP connection closed.")
