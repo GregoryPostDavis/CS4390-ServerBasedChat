@@ -1,5 +1,5 @@
 import hashlib
-from Crypto.Cipher import AES
+#from Crypto.Cipher import AES # PRBLEM WITH LIBRARY & COMPATIBILITY. WILL NOT USE!
 
 
 # FUNCTION FOR GENERATING CK_A
@@ -12,15 +12,29 @@ def cipher_key(rand, secret_key):
 
 # FUNCTION FOR ENCRYPTING MESSAGE
 def encrypt_msg(ck_a, rand, tcp_port):
-    cipher = AES.new(ck_a, AES.MODE_EAX) # CREATE AES CIPHER OBJECT
-    ciphertext, tag = cipher.encrypt_and_digest(tcp_port) # ENCRYPTS MESSAGE
+    cipher_key = ck_a                    # XOR ENCRYPTION KEY
+    message = str(rand) + ";" + str(tcp_port) # PACK RAND_COOKIE AND PORT NUMBER INTO ONE MESSAGE
+    length = len(message)
 
-    data = ciphertext + tag
+    
+    for i in range(length):             # ENCRYPTS MESSAGE
+        message = (message[:i] +
+                   chr(ord(message[i]) ^ ord(cipher_key[i])) +
+                       message[i + 1:]) 
+        
+    return message
 
-    return data
+   
+# FUNCTION FOR DECRYPTING MESSAGE
+def decrypt_msg(message , ck_a: str):
+    cipher_key = ck_a                    # XOR ENCRYPTION KEY
+    message = str(message, "utf-8")      # BYTE TYPE TO STRING TYPE CONVERSION
+    length = len(message)
 
-def decrypt_msg(message, ck_a):
-    cipher = AES.new(ck_a, AES.MODE_EAX)
-    cleartext = cipher.decrypt_and_verify(message)
 
-    return cleartext
+    for i in range(length):             # DECRYPTS MESSAGE
+        message = (message[:i] +
+                   chr(ord(message[i]) ^ ord(cipher_key[i])) +
+                       message[i + 1:]) 
+        
+    return message

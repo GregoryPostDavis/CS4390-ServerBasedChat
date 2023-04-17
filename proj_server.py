@@ -49,22 +49,23 @@ if client_id in subscriber_search:
     #   DONE - retrieve the client's secret key 
     #   DONE - send CHALLENGE message
     #   DONE - receive RESPONSE
-    #   - if failure: send AUTH-FAIL message
-    #   - if success: generate encryption key CK-A and send AUTH-SUCCESS encrypted in that key
+    #   DONE - if failure: send AUTH-FAIL message
+    #   DONE - if success: generate encryption key CK-A and send AUTH-SUCCESS encrypted in that key
     
     challenge_message, xres = proj_auth.server_hash(subscriber_search['clientA'])
 
-    udpsend(udp_socket, client_address, challenge_message) # SENDS CHALLENGE(RAND) MESSAGE TO CLIENT
-    #print("server xres: %s" %(xres)) - DEBUG
+    udpsend(udp_socket, client_address, challenge_message)                  # SENDS CHALLENGE(RAND) MESSAGE TO CLIENT
+    #print("server xres: %s" %(xres))                                       # - DEBUG
 
-    message, client_address = udpreceive(udp_socket) # RECEIVES RESPONSE(RES) FROM CLIENT
+    message, client_address = udpreceive(udp_socket)                        # RECEIVES RESPONSE(RES) FROM CLIENT
     res = message
     
     # CHECKS XRES AND RES
     if proj_auth.check_hash(xres, res): 
         ck_a = proj_encrypt.cipher_key(challenge_message, subscriber_search['clientA'])
-        data = proj_encrypt.encrypt_msg(ck_a, challenge_message, 5675)
-        print("\nCK_A: %s" %(ck_a))
+        data = proj_encrypt.encrypt_msg(ck_a, challenge_message, 5678)
+        #print("\nCK_A: %s" %(ck_a))                                        # - DEBUG 
+        #print("\nENCRYPTED MESSAGE: " , data)                              # - DEBUG
         udpsend(udp_socket, client_address, f"{client_id} AUTH_SUCCESS")
         udpsend(udp_socket, client_address, data)
     else:
