@@ -1,6 +1,6 @@
 import socket
-import proj_auth
-import proj_encrypt
+import authentication
+import encryption
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -44,18 +44,18 @@ response, server_address = udpreceive(udp_socket)
 response, server_address = udpreceive(udp_socket)               # RECEIVE CHALLENGE(RAND) FROM SERVER
 challenge_message = response.decode()
 
-res = proj_auth.client_hash(challenge_message, secret_key)
+res = authentication.client_hash(challenge_message, secret_key)
 udpsend(udp_socket, server_address, res)                        # SENDS RESPONSE(RES) TO SERVER
 
-ck_a = proj_encrypt.cipher_key(challenge_message, secret_key)
+ck_a = encryption.cipher_key(challenge_message, secret_key)
 #print("\nCK_A: %s" %(ck_a))                                    # - DEBUG
 response, server_address = udpreceive(udp_socket)               # RECEIVES AUTH MESSAGE
 response, server_address = udpreceive(udp_socket)
 
-print(proj_encrypt.decrypt_msg(response, ck_a))                 # DECRYPTS MESSAGE <RAND_COOCKIE & TCP_PORT #>
+print(encryption.decrypt_msg(response, ck_a))                 # DECRYPTS MESSAGE <RAND_COOCKIE & TCP_PORT #>
 
-rand_cookie = (proj_encrypt.decrypt_msg(response, ck_a)[:-5])   # EXTRACTS RAND_COOKIE
-tcp_port_num = (proj_encrypt.decrypt_msg(response, ck_a)[11:])  # EXTRRACTS TCP_PORT #
+rand_cookie = (encryption.decrypt_msg(response, ck_a)[:-5])   # EXTRACTS RAND_COOKIE
+tcp_port_num = (encryption.decrypt_msg(response, ck_a)[11:])  # EXTRRACTS TCP_PORT #
 
 print("\nRand_Cookie: ", rand_cookie)                           # - DEBUG
 print("TCP Port Numer: ", tcp_port_num)                         # - DEBUG
