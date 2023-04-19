@@ -73,7 +73,7 @@ tcpreceive(tcp_socket)
 
 while True:
     msg = input("You: ")
-    tcpsend(tcp_socket, msg)
+    tcpsend(tcp_socket, encryption.encrypt_msg(ck_a, msg)) 
     if msg.strip().lower() == "log off":
         break
 

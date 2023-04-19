@@ -19,7 +19,7 @@ def tcpsend(client_socket, message):
 
 def tcpreceive(client_socket, client_id):
     message = client_socket.recv(1024).decode()
-    print(f"{client_id}: " + message) # buffer size not that important, if it goes over it will be saved
+    #print(f"{client_id}: " + message) # buffer size not that important, if it goes over it will be saved
     return message
 
 #####################################################
@@ -56,7 +56,7 @@ if client_id in subscriber_search:
     # CHECKS XRES AND RES
     if authentication.check_hash(xres, res): 
         ck_a = encryption.cipher_key(challenge_message, subscriber_search['clientA'])
-        data = encryption.encrypt_msg(ck_a, challenge_message, 5678)
+        data = encryption.encrypt_authmsg(ck_a, challenge_message, 5678)
         #print("\nCK_A: %s" %(ck_a))                                        # - DEBUG 
         #print("\nENCRYPTED MESSAGE: " , data)                              # - DEBUG
         udpsend(udp_socket, client_address, f"{client_id} AUTH_SUCCESS")
@@ -81,7 +81,10 @@ if client_id in subscriber_search:
 
 
     while True:
-        msg = tcpreceive(client_socket, client_id)
+        #msg = tcpreceive(client_socket, client_id)             # ORIGINAL CODE 
+        msg = encryption.decrypt_msg(tcpreceive(client_socket, client_id), ck_a)
+
+        print(f"{client_id}:", msg)                             # tcpreceive MODIFIED TO ACCOMADATE DECRYPT FUNCTION
         if msg.strip().lower() == "log off":
             print("logging off...")
             break
