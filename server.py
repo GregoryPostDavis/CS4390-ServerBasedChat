@@ -49,27 +49,51 @@ def createClientConnection(c_id, c_addr):
     fName = now.strftime("%H.%M.%S.txt")
     f = open(fName, 'a')  # Opens and appends text to file if one does not exist - will be useful when not using Times as names
 
+    connectedTo = " "
+    desiredConnection = " "
+
     # Message Handling from Client
     while True:
-        msg = tcpreceive(client_socket, c_id)
-        if msg.strip().lower() == "log off":
-            print("Logging Off...")
-            break
+        if connectedTo == " ":
+            for items in connectionRequests:
+                if items == (c_id, desiredConnection):
+                    connectedTo = desiredConnection
+                    desiredConnection = " "
+                    availableClients.remove(c_id)
 
-        elif msg.strip().lower().startswith("connect"):
-            connectTo = msg[7:].strip()
-            print("Attempting to connect to ", connectTo)
-            if connectTo in subscriber_search and connectTo in availableClients:
-                print("Connecting you to ", connectTo)
-                #  availableClients.remove(c_id)
+        while messageQueue.empty():
+            msg = tcpreceive(client_socket, c_id)
+            if msg.strip().lower() == "log off":
+                print("Logging Off...")
+                break
+
+            elif msg.strip().lower().startswith("connect"):
+                connectTo = msg[7:].strip()
+                print("Attempting to connect to ", connectTo)
+                if connectTo in subscriber_search and connectTo in availableClients:
+                    print("Connecting you to ", connectTo)
+                    desiredConnection = connectTo
+                    #  availableClients.remove(c_id)
+                else:
+                    print("Cannot connect you to ", connectTo)
+
             else:
-                print("Cannot connect you to ", connectTo)
+                # If not a 'log off' message, write to log file
+                strToWrite = client_id + ": " + msg
+                f.write(strToWrite)
+                f.write("\n")
+                 #  Add message to message queue
+                messageQueue.put((connectedTo, c_id, msg))
 
-        else:
-            # If not a 'log off' message, write to log file
-            strToWrite = client_id + ": " + msg
-            f.write(strToWrite)
-            f.write("\n")
+
+
+        # Message Queue is not empty anymore
+
+        tempQueue = queue.Queue
+        for item in list(messageQueue):
+            tempQueue.put(item)
+        if tempQueue.get[0] == c_id:  # MessageQueue[] contains tuples (To, From, Message)
+            tcpsend(client_socket, messageQueue.get()[3])
 
     client_socket.close()
     tcp_socket.close()
@@ -87,10 +111,13 @@ subscriber_search = dict(subscriber_list)
 subscriber_ports = [('clientA', 1111), ('clientB', 2222), ('clientC', 3333)]  # predefined subscriber ports
 port_search = dict(subscriber_ports)
 
-availableClients = []
-
 IP = '127.0.0.1'
 UDP_PORT = 1234
+
+# Client to Client Connection Values
+availableClients = []
+messageQueue = queue.Queue() # Format (To, From, Message)
+connectionRequests = [] # (connectionA,connectionB)
 
 # UDP socket creation
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # AF_INET: internet, SOCK_DGRAM: UDP
@@ -98,6 +125,7 @@ udp_socket.bind((IP, UDP_PORT))
 print("\n* UDP socket bound to %s" % (UDP_PORT))  # debug
 print("* Waiting for client response...\n")  # debug
 
+# Create TCP Sockets and Threads
 while True:
     # HELLO
     message, client_address = udpreceive(udp_socket)
