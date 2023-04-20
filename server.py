@@ -105,12 +105,21 @@ def createClientConnection(c_id, c_addr):
 
 def messageHandler():
     print("Message Handler Started")
-
+    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while True:
         if not messageQueue.empty():
             # print("Message in Queue")
             currentMessage = messageQueue.get()
-            print(currentMessage[2])
+            if currentMessage[2].lower().startswith("connect"):
+                pass
+            else:
+                RECV_PORT = recv_search.get(currentMessage[0])
+                print(currentMessage[0])
+                print(RECV_PORT)
+                tcp_sock.connect((IP, RECV_PORT))
+                tcpsend(tcp_sock, currentMessage[2])
+                tcp_sock.close()
+                # print(currentMessage[2])
 
 
 #####################################################
@@ -120,7 +129,7 @@ subscriber_list = [('clientA', 100), ('clientB', 200,), ('clientC', 300)]  # pre
 subscriber_search = dict(subscriber_list)
 subscriber_ports = [('clientA', 8000), ('clientB', 8010), ('clientC', 8020)]  # predefined subscriber ports
 port_search = dict(subscriber_ports)
-recv_ports = [('clientA', 8100), ('clientB', 8200), ('clientC', 8300)]  # predefined subscriber ports
+recv_ports = [("clientA", 8100), ("clientB", 8200), ("clientC", 8300)]  # predefined subscriber ports
 recv_search = dict(recv_ports)
 connection_list = []
 connection_search = dict(connection_list)

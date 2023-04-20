@@ -20,10 +20,14 @@ def tcpreceive(tcp_socket):
     return message, server_address
 
 def msgHandler():
-
+    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_sock.bind((IP, RECV_PORT))
+    tcp_sock.listen()
     while True:
-        break
-    print("Client A")
+        conn, addr = tcp_sock.accept()
+        tcpreceive(conn)
+
+
 #####################################################
 
 # predefine values
