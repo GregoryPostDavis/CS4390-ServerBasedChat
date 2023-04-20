@@ -47,8 +47,7 @@ def createClientConnection(c_id, c_addr):
     # Message Logging (To Text File)
     now = datetime.now()
     fName = now.strftime("%H.%M.%S.txt")
-    f = open(fName,
-             'a')  # Opens and appends text to file if one does not exist - will be useful when not using Times as names
+    f = open(fName, 'a')  # Opens and appends text to file if one does not exist
 
     # Connection
     connectedTo = "unreachableValue"
@@ -62,9 +61,9 @@ def createClientConnection(c_id, c_addr):
                     connectedTo = items[1]
                     desiredConnection = " "
                     print("You have been connected to ", items[1])
+                    connection_list.append((c_id))
                     availableClients.remove(c_id)
                     connectionRequests.remove(items)
-                    connection_list.append((c_id, client_socket))
 
         client_socket.settimeout(.5)
         # msg = tcpreceive(client_socket, c_id)  # Not using this because we need it to timeout
@@ -79,7 +78,7 @@ def createClientConnection(c_id, c_addr):
                 print("Logging Off...")
                 if c_id in availableClients:
                     availableClients.remove(c_id)
-                connection_list.remove((c_id, client_socket))
+                connection_list.remove((c_id))
                 client_socket.close()
                 tcp_socket.close()
                 print("* TCP connection closed.")
@@ -91,7 +90,7 @@ def createClientConnection(c_id, c_addr):
                 if connectTo in subscriber_search and connectTo in availableClients:
                     print("Sending a connection request to connect with ", connectTo)
                     desiredConnection = connectTo
-                    connectionRequests.append((connectTo, c_id, client_socket))
+                    connectionRequests.append((connectTo, c_id.strip(), client_socket))
                 else:
                     print("Cannot connect you to ", connectTo)
 
@@ -101,29 +100,17 @@ def createClientConnection(c_id, c_addr):
                 f.write(strToWrite)
                 f.write("\n")
                 #  Add message to message queue
-            messageQueue.put((connectedTo, c_id, msg))  #  Destination, Source, Message
-
-        # Message Queue is not empty anymore
-
-        # tempQueue = queue.Queue
-        # for item in list(messageQueue):
-        # tempQueue.put(item)
-        # if tempQueue.get[0] == c_id:  # MessageQueue[] contains tuples (To, From, Message)
-        # tcpsend(client_socket, messageQueue.get()[3])
-
-        #  Try passing the socket into the message queue and having a thread iterate through messageQueue
+            messageQueue.put((connectedTo, c_id, msg))  # Destination, Source, Message
 
 
 def messageHandler():
     print("Message Handler Started")
+
     while True:
         if not messageQueue.empty():
-            #print("Message in Queue")
+            # print("Message in Queue")
             currentMessage = messageQueue.get()
             print(currentMessage[2])
-            if currentMessage[0] in connection_search:
-
-                tcpsend(connection_search.get(currentMessage[0]), currentMessage[2])
 
 
 #####################################################
@@ -131,8 +118,10 @@ def messageHandler():
 # predefined values
 subscriber_list = [('clientA', 100), ('clientB', 200,), ('clientC', 300)]  # predefined subscriber list
 subscriber_search = dict(subscriber_list)
-subscriber_ports = [('clientA', 1111), ('clientB', 2222), ('clientC', 3333)]  # predefined subscriber ports
+subscriber_ports = [('clientA', 8000), ('clientB', 8010), ('clientC', 8020)]  # predefined subscriber ports
 port_search = dict(subscriber_ports)
+recv_ports = [('clientA', 8100), ('clientB', 8200), ('clientC', 8300)]  # predefined subscriber ports
+recv_search = dict(recv_ports)
 connection_list = []
 connection_search = dict(connection_list)
 
@@ -150,13 +139,13 @@ udp_socket.bind((IP, UDP_PORT))
 print("\n* UDP socket bound to %s" % (UDP_PORT))  # debug
 print("* Waiting for client response...\n")  # debug
 
+start_new_thread(messageHandler, ())  # Message Handling is done in its own thread
+
 # Create TCP Sockets and Threads
 while True:
     # HELLO
     message, client_address = udpreceive(udp_socket)
     client_id = message[6:-1]  # extract the client ID
-
-    start_new_thread((messageHandler), ())
 
     # Verification
     if client_id in subscriber_search:
@@ -169,7 +158,6 @@ while True:
         #   - receive RESPONSE
         #   - if failure: send AUTH-FAIL message
         #   - if success: generate encryption key CK-A and send AUTH-SUCCESS encrypted in that key
-
 
     else:
         print("* Client is not in the subscriber list.")

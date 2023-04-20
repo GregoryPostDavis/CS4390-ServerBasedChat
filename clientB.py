@@ -19,9 +19,10 @@ def tcpreceive(tcp_socket):
     print("Server: ", message.decode())
     return message, server_address
 
-def msgHandler(tcp_socket,number):
+def msgHandler():
     while True:
-        tcpreceive(tcp_socket)
+        break
+    print("Client B")
 #####################################################
 
 # predefine values
@@ -45,7 +46,8 @@ response, server_address = udpreceive(udp_socket)
 #   - Generate CK-A key, receive and decrypt the AUTH-SUCCESS message
 
 # TCP Socket
-TCP_PORT = 2222
+TCP_PORT = 8010
+RECV_PORT = 8200
 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # AF_INET: internet, SOCK_STREAM: TCP
 tcp_socket.connect((IP, TCP_PORT))
 print("\n* TCP socket created\n")  # debug
@@ -55,7 +57,7 @@ rand_cookie = 0
 tcpsend(tcp_socket, f'CONNECT({rand_cookie})')
 tcpreceive(tcp_socket)
 
-start_new_thread(msgHandler, (tcp_socket,0))
+
 
 #tcp_socket.settimeout(.1)
 while True:
@@ -64,7 +66,8 @@ while True:
     # tcp_socket.sendall(msg)
     if msg.strip().lower() == "log off":
         break
-    elif msg:  # empty strings are considered false
+    elif msg.strip().lower().startswith("connect"):  # empty strings are considered false
+        start_new_thread(msgHandler, ())
         pass
         # msg = input("You: ")
 
