@@ -1,7 +1,7 @@
 import socket
-import time  # For Debug
 from datetime import datetime
 from _thread import *
+import queue
 
 
 def udpsend(udp_socket, client_address, message):
@@ -39,35 +39,55 @@ def createClientConnection(c_id, c_addr):
 
     # CONNECT
     rand_cookie = 0
-    message = tcpreceive(client_socket, client_id)
-    if str(rand_cookie) == message[8:-1]:
+    msgs = tcpreceive(client_socket, c_id)
+    if str(rand_cookie) == msgs[8:-1]:
         tcpsend(client_socket, "CONNECTED\n")
+        availableClients.append(c_id)
 
+    # Message Logging (To Text File)
     now = datetime.now()
     fName = now.strftime("%H.%M.%S.txt")
-    f = open(fName, 'a')
+    f = open(fName, 'a')  # Opens and appends text to file if one does not exist - will be useful when not using Times as names
 
+    # Message Handling from Client
     while True:
         msg = tcpreceive(client_socket, c_id)
         if msg.strip().lower() == "log off":
-            print("logging off...")
+            print("Logging Off...")
             break
+
+        elif msg.strip().lower().startswith("connect"):
+            connectTo = msg[7:].strip()
+            print("Attempting to connect to ", connectTo)
+            if connectTo in subscriber_search and connectTo in availableClients:
+                print("Connecting you to ", connectTo)
+                #  availableClients.remove(c_id)
+            else:
+                print("Cannot connect you to ", connectTo)
+
         else:
+            # If not a 'log off' message, write to log file
             strToWrite = client_id + ": " + msg
             f.write(strToWrite)
             f.write("\n")
+
     client_socket.close()
     tcp_socket.close()
+    if c_id in availableClients:
+        availableClients.remove(c_id)
     print("* TCP connection closed.")
-    return
+    return  # Closes Thread
 
 
 #####################################################
+
 # predefined values
 subscriber_list = [('clientA', 100), ('clientB', 200,), ('clientC', 300)]  # predefined subscriber list
 subscriber_search = dict(subscriber_list)
 subscriber_ports = [('clientA', 1111), ('clientB', 2222), ('clientC', 3333)]  # predefined subscriber ports
 port_search = dict(subscriber_ports)
+
+availableClients = []
 
 IP = '127.0.0.1'
 UDP_PORT = 1234
