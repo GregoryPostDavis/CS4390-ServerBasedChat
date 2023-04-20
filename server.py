@@ -119,6 +119,7 @@ def messageHandler():
                 tcp_sock.connect((IP, RECV_PORT))
                 tcpsend(tcp_sock, currentMessage[2])
                 tcp_sock.close()
+                tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 # print(currentMessage[2])
 
 
