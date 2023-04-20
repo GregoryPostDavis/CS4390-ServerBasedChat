@@ -47,60 +47,83 @@ def createClientConnection(c_id, c_addr):
     # Message Logging (To Text File)
     now = datetime.now()
     fName = now.strftime("%H.%M.%S.txt")
-    f = open(fName, 'a')  # Opens and appends text to file if one does not exist - will be useful when not using Times as names
+    f = open(fName,
+             'a')  # Opens and appends text to file if one does not exist - will be useful when not using Times as names
 
-    connectedTo = " "
+    # Connection
+    connectedTo = "unreachableValue"
     desiredConnection = " "
 
     # Message Handling from Client
     while True:
-        if connectedTo == " ":
+        if connectedTo == "unreachableValue":
             for items in connectionRequests:
-                if items == (c_id, desiredConnection):
-                    connectedTo = desiredConnection
+                if items[0] == c_id and items[1] == desiredConnection:
+                    connectedTo = items[1]
                     desiredConnection = " "
+                    print("You have been connected to ", items[1])
                     availableClients.remove(c_id)
+                    connectionRequests.remove(items)
+                    connection_list.append((c_id, client_socket))
 
-        while messageQueue.empty():
-            msg = tcpreceive(client_socket, c_id)
+        client_socket.settimeout(.5)
+        # msg = tcpreceive(client_socket, c_id)  # Not using this because we need it to timeout
+        try:
+            msg = client_socket.recv(1024).decode()
+        except socket.timeout:
+            # no message received
+            pass
+        else:
             if msg.strip().lower() == "log off":
+                # Close Everything Important and remove visibility for other clients
                 print("Logging Off...")
-                break
+                if c_id in availableClients:
+                    availableClients.remove(c_id)
+                connection_list.remove((c_id, client_socket))
+                client_socket.close()
+                tcp_socket.close()
+                print("* TCP connection closed.")
+                return  # Closes Thread
 
             elif msg.strip().lower().startswith("connect"):
                 connectTo = msg[7:].strip()
-                print("Attempting to connect to ", connectTo)
+                # print("Sending a Connection Request ", connectTo)
                 if connectTo in subscriber_search and connectTo in availableClients:
-                    print("Connecting you to ", connectTo)
+                    print("Sending a connection request to connect with ", connectTo)
                     desiredConnection = connectTo
-                    #  availableClients.remove(c_id)
+                    connectionRequests.append((connectTo, c_id, client_socket))
                 else:
                     print("Cannot connect you to ", connectTo)
 
-            else:
+            elif msg:
                 # If not a 'log off' message, write to log file
                 strToWrite = client_id + ": " + msg
                 f.write(strToWrite)
                 f.write("\n")
-                 #  Add message to message queue
-                messageQueue.put((connectedTo, c_id, msg))
-
-
+                #  Add message to message queue
+            messageQueue.put((connectedTo, c_id, msg))  #  Destination, Source, Message
 
         # Message Queue is not empty anymore
 
-        tempQueue = queue.Queue
-        for item in list(messageQueue):
-            tempQueue.put(item)
-        if tempQueue.get[0] == c_id:  # MessageQueue[] contains tuples (To, From, Message)
-            tcpsend(client_socket, messageQueue.get()[3])
+        # tempQueue = queue.Queue
+        # for item in list(messageQueue):
+        # tempQueue.put(item)
+        # if tempQueue.get[0] == c_id:  # MessageQueue[] contains tuples (To, From, Message)
+        # tcpsend(client_socket, messageQueue.get()[3])
 
-    client_socket.close()
-    tcp_socket.close()
-    if c_id in availableClients:
-        availableClients.remove(c_id)
-    print("* TCP connection closed.")
-    return  # Closes Thread
+        #  Try passing the socket into the message queue and having a thread iterate through messageQueue
+
+
+def messageHandler():
+    print("Message Handler Started")
+    while True:
+        if not messageQueue.empty():
+            #print("Message in Queue")
+            currentMessage = messageQueue.get()
+            print(currentMessage[2])
+            if currentMessage[0] in connection_search:
+
+                tcpsend(connection_search.get(currentMessage[0]), currentMessage[2])
 
 
 #####################################################
@@ -110,14 +133,16 @@ subscriber_list = [('clientA', 100), ('clientB', 200,), ('clientC', 300)]  # pre
 subscriber_search = dict(subscriber_list)
 subscriber_ports = [('clientA', 1111), ('clientB', 2222), ('clientC', 3333)]  # predefined subscriber ports
 port_search = dict(subscriber_ports)
+connection_list = []
+connection_search = dict(connection_list)
 
 IP = '127.0.0.1'
 UDP_PORT = 1234
 
 # Client to Client Connection Values
 availableClients = []
-messageQueue = queue.Queue() # Format (To, From, Message)
-connectionRequests = [] # (connectionA,connectionB)
+messageQueue = queue.Queue()  # Format (To, From, Message)
+connectionRequests = []  # (connectionA,connectionB, socketA)
 
 # UDP socket creation
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # AF_INET: internet, SOCK_DGRAM: UDP
@@ -130,6 +155,8 @@ while True:
     # HELLO
     message, client_address = udpreceive(udp_socket)
     client_id = message[6:-1]  # extract the client ID
+
+    start_new_thread((messageHandler), ())
 
     # Verification
     if client_id in subscriber_search:

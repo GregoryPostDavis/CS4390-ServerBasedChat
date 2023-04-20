@@ -1,5 +1,6 @@
 import socket
 import time
+from _thread import *
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -18,6 +19,9 @@ def tcpreceive(tcp_socket):
     print("Server: ", message.decode())
     return message, server_address
 
+def msgHandler(tcp_socket,number):
+    while True:
+        tcpreceive(tcp_socket)
 #####################################################
 
 # predefine values
@@ -51,11 +55,19 @@ rand_cookie = 0
 tcpsend(tcp_socket, f'CONNECT({rand_cookie})')
 tcpreceive(tcp_socket)
 
+start_new_thread(msgHandler, (tcp_socket,0))
+
+#tcp_socket.settimeout(.1)
 while True:
     msg = input("You: ")
     tcpsend(tcp_socket, msg)
+    # tcp_socket.sendall(msg)
     if msg.strip().lower() == "log off":
         break
+    elif msg:  # empty strings are considered false
+        pass
+        # msg = input("You: ")
+
 
 tcp_socket.close()
 print("* TCP connection closed.")
