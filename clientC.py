@@ -1,5 +1,4 @@
 import socket
-import time
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -41,8 +40,8 @@ response, server_address = udpreceive(udp_socket)
 #   - Generate CK-A key, receive and decrypt the AUTH-SUCCESS message
 
 # TCP Socket
-TCP_PORT = 8020
-RECV_PORT = 8300
+TCP_PORT = 4020
+RECV_PORT = 4300
 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # AF_INET: internet, SOCK_STREAM: TCP
 tcp_socket.connect((IP, TCP_PORT))
 print("\n* TCP socket created\n")  # debug

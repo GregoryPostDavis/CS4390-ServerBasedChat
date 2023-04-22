@@ -1,5 +1,4 @@
 import socket
-import time
 from _thread import *
 
 def udpsend(udp_socket, server_address, message):
@@ -16,7 +15,7 @@ def tcpsend(tcp_socket, message):
 
 def tcpreceive(tcp_socket):
     message, server_address = tcp_socket.recvfrom(1024)
-    print("Server: ", message.decode())
+    print("Them: ", message.decode())
     return message, server_address
 
 def msgHandler():
@@ -50,8 +49,8 @@ response, server_address = udpreceive(udp_socket)
 #   - Generate CK-A key, receive and decrypt the AUTH-SUCCESS message
 
 # TCP Socket
-TCP_PORT = 8010
-RECV_PORT = 8200
+TCP_PORT = 4010
+RECV_PORT = 4200
 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # AF_INET: internet, SOCK_STREAM: TCP
 tcp_socket.connect((IP, TCP_PORT))
 print("\n* TCP socket created\n")  # debug
@@ -61,19 +60,17 @@ rand_cookie = 0
 tcpsend(tcp_socket, f'CONNECT({rand_cookie})')
 tcpreceive(tcp_socket)
 
+listenerThread = False
 
-
-#tcp_socket.settimeout(.1)
 while True:
     msg = input("You: ")
     tcpsend(tcp_socket, msg)
-    # tcp_socket.sendall(msg)
     if msg.strip().lower() == "log off":
         break
-    elif msg.strip().lower().startswith("connect"):  # empty strings are considered false
+    elif msg.strip().lower().startswith("connect") and not listenerThread:  # empty strings are considered false
+        listenerThread = True
         start_new_thread(msgHandler, ())
         pass
-        # msg = input("You: ")
 
 
 tcp_socket.close()

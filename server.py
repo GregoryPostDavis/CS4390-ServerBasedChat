@@ -55,13 +55,13 @@ def createClientConnection(c_id, c_addr):
 
     # Message Handling from Client
     while True:
-        if connectedTo == "unreachableValue":
+        if connectedTo == "unreachableValue":  # Default Value - Only used if no connection has been made
             for items in connectionRequests:
                 if items[0] == c_id and items[1] == desiredConnection:
                     connectedTo = items[1]
-                    desiredConnection = " "
+                    desiredConnection = " "  # Resets this value just to be safe
                     print("You have been connected to ", items[1])
-                    connection_list.append((c_id))
+                    connection_list.append(c_id)
                     availableClients.remove(c_id)
                     connectionRequests.remove(items)
 
@@ -112,6 +112,8 @@ def messageHandler():
             currentMessage = messageQueue.get()
             if currentMessage[2].lower().startswith("connect"):
                 pass
+            elif currentMessage[0] == "unreachableValue":
+                pass
             else:
                 RECV_PORT = recv_search.get(currentMessage[0])
                 print(currentMessage[0])
@@ -128,9 +130,9 @@ def messageHandler():
 # predefined values
 subscriber_list = [('clientA', 100), ('clientB', 200,), ('clientC', 300)]  # predefined subscriber list
 subscriber_search = dict(subscriber_list)
-subscriber_ports = [('clientA', 8000), ('clientB', 8010), ('clientC', 8020)]  # predefined subscriber ports
+subscriber_ports = [('clientA', 4000), ('clientB', 4010), ('clientC', 4020)]  # predefined subscriber ports
 port_search = dict(subscriber_ports)
-recv_ports = [("clientA", 8100), ("clientB", 8200), ("clientC", 8300)]  # predefined subscriber ports
+recv_ports = [("clientA", 4100), ("clientB", 4200), ("clientC", 4300)]  # predefined subscriber ports
 recv_search = dict(recv_ports)
 connection_list = []
 connection_search = dict(connection_list)
