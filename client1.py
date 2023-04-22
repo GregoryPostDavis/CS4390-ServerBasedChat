@@ -43,9 +43,10 @@ response, server_address = udpreceive(udp_socket)
 
 response, server_address = udpreceive(udp_socket)               # RECEIVE CHALLENGE(RAND) FROM SERVER
 challenge_message = response.decode()
+challenge_message = challenge_message[10:-1]
 
 res = authentication.client_hash(challenge_message, secret_key)
-udpsend(udp_socket, server_address, res)                        # SENDS RESPONSE(RES) TO SERVER
+udpsend(udp_socket, server_address, f'RESPONSE({client_id}, {res})')                        # SENDS RESPONSE(RES) TO SERVER
 
 ck_a = encryption.cipher_key(challenge_message, secret_key)
 #print("\nCK_A: %s" %(ck_a))                                    # - DEBUG

@@ -47,11 +47,11 @@ if client_id in subscriber_search:
 
     challenge_message, xres = authentication.server_hash(subscriber_search['clientA'])
 
-    udpsend(udp_socket, client_address, challenge_message)                  # SENDS CHALLENGE(RAND) MESSAGE TO CLIENT
+    udpsend(udp_socket, client_address, f"CHALLENGE({challenge_message})")                  # SENDS CHALLENGE(RAND) MESSAGE TO CLIENT
     #print("server xres: %s" %(xres))                                       # - DEBUG
 
     message, client_address = udpreceive(udp_socket)                        # RECEIVES RESPONSE(RES) FROM CLIENT
-    res = message
+    res = message[18:-1]
     
     # CHECKS XRES AND RES
     if authentication.check_hash(xres, res): 
@@ -60,7 +60,7 @@ if client_id in subscriber_search:
         #print("\nCK_A: %s" %(ck_a))                                        # - DEBUG 
         #print("\nENCRYPTED MESSAGE: " , data)                              # - DEBUG
         udpsend(udp_socket, client_address, f"{client_id} AUTH_SUCCESS")
-        udpsend(udp_socket, client_address, data)
+        udpsend(udp_socket, client_address, data) # debug
     else:
         udpsend(udp_socket, client_address, f"{client_id} AUTH_FAIL")
 
