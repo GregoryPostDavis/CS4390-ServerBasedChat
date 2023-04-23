@@ -1,6 +1,8 @@
 import socket
 import authentication
 import encryption
+from _thread import *
+import queue
 
 def udpsend(udp_socket, client_address, message):
     udp_socket.sendto(message.encode(), client_address)
@@ -21,11 +23,24 @@ def tcpreceive(client_socket, client_id, ck_a):
     print(f"{client_id}: " + message)
     return message
 
+def createClientConnection(c_id, c_addr):
+    # TCP Socket
+    TCP_PORT = subscriber_search.get(c_id,None)[1]
+    tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_socket.bind((IP, TCP_PORT))
+    tcp_socket.listen()
+
+    client_socket, address = tcp_socket.accept() # Returns client socket and address
+    print("\n* TCP socket bound to %s\n" % (TCP_PORT))
+
 #####################################################
 
+
 # predefined subscribers
-subscriber_list = [('clientA', 100),('clientB', 200),('clientC', 300)]
+subscriber_list = [('clientA', (100,4000,4100)),('clientB', (200,4010,4110)),('clientC', (300,4020,4120))]  # (ID, (Secret Key, Snd Port, Rec Port))
 subscriber_search = dict(subscriber_list)
+connection_list = []
+connection_search = dict(connection_list)
 
 # UDP socket creation
 IP = '127.0.0.1'
