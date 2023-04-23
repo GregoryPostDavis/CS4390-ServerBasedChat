@@ -1,4 +1,5 @@
 import socket
+import time
 from _thread import *
 
 def udpsend(udp_socket, server_address, message):
@@ -15,7 +16,7 @@ def tcpsend(tcp_socket, message):
 
 def tcpreceive(tcp_socket):
     message, server_address = tcp_socket.recvfrom(1024)
-    print("Them: ", message.decode())
+    print(message.decode())
     return message, server_address
 
 def msgHandler():
@@ -64,6 +65,7 @@ tcpreceive(tcp_socket)
 listenerThread = False
 
 while True:
+    time.sleep(.1)
     msg = input("You: ")
     if msg == "disconnect":
         msg = "END_REQUEST"
