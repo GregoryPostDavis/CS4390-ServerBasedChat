@@ -66,12 +66,13 @@ def createClientConnection(c_id, c_addr):
                     availableClients.remove(c_id)
                     connectionRequests.remove(items)
         else:
-            if desiredConnection in availableClients:
-                connection_list.remove(c_id)
-                connection_list.remove(connectedTo)
+            if c_id not in connection_list:
+                # connection_list.remove(c_id)
+                # connection_list.remove(connectedTo)
                 desiredConnection = " "
                 connectedTo = "unreachableValue"
-                availableClients.append(c_id)
+                if c_id not in availableClients:
+                    availableClients.append(c_id)
 
         client_socket.settimeout(.5)
         # msg = tcpreceive(client_socket, c_id)  # Not using this because we need it to timeout
@@ -86,8 +87,12 @@ def createClientConnection(c_id, c_addr):
                 print("Logging Off...")
                 if c_id in availableClients:
                     availableClients.remove(c_id)
+                if c_id in connection_list:
+                    connection_list.remove(c_id)
+
                 client_socket.close()
                 tcp_socket.close()
+
                 print("* TCP connection closed.")
                 return  # Closes Thread
 
@@ -100,9 +105,10 @@ def createClientConnection(c_id, c_addr):
                     connectionRequests.append((connectTo, c_id.strip(), client_socket))
                 else:
                     print("Cannot connect you to ", connectTo)
-                    messageQueue.put(c_id, c_id, "UNREACHABLE")
+                    messageQueue.put((c_id, c_id, "UNREACHABLE"))
 
             elif msg.strip() == "END_REQUEST":
+                messageQueue.put((connectedTo, c_id, "END_NOTIF"))
                 connection_list.remove(c_id)
                 connection_list.remove(connectedTo)
                 desiredConnection = " "
@@ -126,7 +132,7 @@ def messageHandler():
         if not messageQueue.empty():
             # print("Message in Queue")
             currentMessage = messageQueue.get()
-            if currentMessage[2].lower().startswith("connect"):
+            if currentMessage[2].lower().startswith("connect "):
                 if currentMessage[0].strip().lower() == currentMessage[1].strip().lower():
                     pass
                 elif currentMessage[2][7:].strip().lower() in recv_search:
