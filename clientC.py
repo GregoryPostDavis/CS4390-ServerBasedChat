@@ -1,16 +1,20 @@
 import socket
 
+
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
     print("You: " + message)
+
 
 def udpreceive(udp_socket):
     response, server_address = udp_socket.recvfrom(1024) # server response
     print("Server: " + response.decode())
     return response, server_address
 
+
 def tcpsend(tcp_socket, message):
     tcp_socket.send(message.encode())
+
 
 def tcpreceive(tcp_socket):
     message, server_address = tcp_socket.recvfrom(1024)
@@ -18,6 +22,7 @@ def tcpreceive(tcp_socket):
     return message, server_address
 
 #####################################################
+
 
 # predefine values
 client_id = 'clientC'  # hardcoded client ID: has to be in subscribed users list

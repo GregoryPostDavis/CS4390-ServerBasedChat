@@ -65,6 +65,8 @@ listenerThread = False
 
 while True:
     msg = input("You: ")
+    if msg == "disconnect":
+        msg = "END_REQUEST"
     tcpsend(tcp_socket, msg)
     if msg.strip().lower() == "log off":
         break

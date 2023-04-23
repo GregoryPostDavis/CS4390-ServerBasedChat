@@ -45,9 +45,9 @@ def createClientConnection(c_id, c_addr):
         availableClients.append(c_id)
 
     # Message Logging (To Text File)
-    now = datetime.now()
-    fName = now.strftime("%H.%M.%S.txt")
-    f = open(fName, 'a')  # Opens and appends text to file if one does not exist
+    # now = datetime.now()
+    # fName = now.strftime("%H.%M.%S.txt")
+    # f = open(fName, 'a')  # Opens and appends text to file if one does not exist
 
     # Connection
     connectedTo = "unreachableValue"
@@ -60,10 +60,18 @@ def createClientConnection(c_id, c_addr):
                 if items[0] == c_id and items[1] == desiredConnection:
                     connectedTo = items[1]
                     desiredConnection = " "  # Resets this value just to be safe
-                    print("You have been connected to ", items[1])
+                    # print("You have been connected to ", items[1])
+                    #tcpsend(tcp_socket, "CHAT_STARTED\n")
                     connection_list.append(c_id)
                     availableClients.remove(c_id)
                     connectionRequests.remove(items)
+        else:
+            if desiredConnection in availableClients:
+                connection_list.remove(c_id)
+                connection_list.remove(connectedTo)
+                desiredConnection = " "
+                connectedTo = "unreachableValue"
+                availableClients.append(c_id)
 
         client_socket.settimeout(.5)
         # msg = tcpreceive(client_socket, c_id)  # Not using this because we need it to timeout
@@ -78,7 +86,6 @@ def createClientConnection(c_id, c_addr):
                 print("Logging Off...")
                 if c_id in availableClients:
                     availableClients.remove(c_id)
-                connection_list.remove((c_id))
                 client_socket.close()
                 tcp_socket.close()
                 print("* TCP connection closed.")
@@ -93,31 +100,53 @@ def createClientConnection(c_id, c_addr):
                     connectionRequests.append((connectTo, c_id.strip(), client_socket))
                 else:
                     print("Cannot connect you to ", connectTo)
+                    messageQueue.put(c_id, c_id, "UNREACHABLE")
 
+            elif msg.strip() == "END_REQUEST":
+                connection_list.remove(c_id)
+                connection_list.remove(connectedTo)
+                desiredConnection = " "
+                connectedTo = "unreachableValue"
+                availableClients.append(c_id)
             elif msg:
+                pass
                 # If not a 'log off' message, write to log file
-                strToWrite = client_id + ": " + msg
-                f.write(strToWrite)
-                f.write("\n")
+                # strToWrite = client_id + ": " + msg
+                # f.write(strToWrite)
+                # f.write("\n")
                 #  Add message to message queue
+
             messageQueue.put((connectedTo, c_id, msg))  # Destination, Source, Message
 
 
 def messageHandler():
-    print("Message Handler Started")
+    # print("Message Handler Started")
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while True:
         if not messageQueue.empty():
             # print("Message in Queue")
             currentMessage = messageQueue.get()
             if currentMessage[2].lower().startswith("connect"):
-                pass
+                if currentMessage[0].strip().lower() == currentMessage[1].strip().lower():
+                    pass
+                elif currentMessage[2][7:].strip().lower() in recv_search:
+                    RECV_PORT = recv_search.get(currentMessage[2][7:])
+                    tcp_sock.connect((IP, RECV_PORT))
+                    tcpsend(tcp_sock, ("CHAT_REQUEST", currentMessage[1]))
+                    tcp_sock.close()
+                    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             elif currentMessage[0] == "unreachableValue":
-                pass
+                pass  # ignores messages that are sent to "nobody"
+            elif currentMessage[2] == "END_REQUEST":
+                RECV_PORT = recv_search.get(currentMessage[0])
+                tcp_sock.connect((IP, RECV_PORT))
+                tcpsend(tcp_sock, "END_NOTIF")
+                tcp_sock.close()
+                tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             else:
                 RECV_PORT = recv_search.get(currentMessage[0])
-                print(currentMessage[0])
-                print(RECV_PORT)
+                # print(currentMessage[0]) debug
+                # print(RECV_PORT) debug
                 tcp_sock.connect((IP, RECV_PORT))
                 tcpsend(tcp_sock, currentMessage[2])
                 tcp_sock.close()

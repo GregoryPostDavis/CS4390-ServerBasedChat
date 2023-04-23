@@ -1,22 +1,27 @@
 import socket
 from _thread import *
 
+
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
     print("You: " + message)
+
 
 def udpreceive(udp_socket):
     response, server_address = udp_socket.recvfrom(1024) # server response
     print("Server: " + response.decode())
     return response, server_address
 
+
 def tcpsend(tcp_socket, message):
     tcp_socket.send(message.encode())
+
 
 def tcpreceive(tcp_socket):
     message, server_address = tcp_socket.recvfrom(1024)
     print("Them: ", message.decode())
     return message, server_address
+
 
 def msgHandler():
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,6 +32,7 @@ def msgHandler():
         tcpreceive(conn)
 
 #####################################################
+
 
 # predefine values
 client_id = 'clientB'  # hardcoded client ID: has to be in subscribed users list
@@ -64,6 +70,8 @@ listenerThread = False
 
 while True:
     msg = input("You: ")
+    if msg == "disconnect":
+        msg = "END_REQUEST"
     tcpsend(tcp_socket, msg)
     if msg.strip().lower() == "log off":
         break
