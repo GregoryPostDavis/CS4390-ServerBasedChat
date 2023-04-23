@@ -60,32 +60,31 @@ def createClientConnection(c_id, c_addr):
                 if items[0] == c_id and items[1] == desiredConnection:
                     connectedTo = items[1]
                     desiredConnection = " "  # Resets this value just to be safe
-                    # print("You have been connected to ", items[1])
-                    #tcpsend(tcp_socket, "CHAT_STARTED\n")
                     connection_list.append(c_id)
                     availableClients.remove(c_id)
                     connectionRequests.remove(items)
                     messageQueue.put((c_id,c_id,("CHAT STARTED WITH " + connectedTo)))
         else:
             if c_id not in connection_list:
-                # connection_list.remove(c_id)
-                # connection_list.remove(connectedTo)
                 desiredConnection = " "
                 connectedTo = "unreachableValue"
                 if c_id not in availableClients:
                     availableClients.append(c_id)
 
-        client_socket.settimeout(.5)
-        # msg = tcpreceive(client_socket, c_id)  # Not using this because we need it to timeout
+        client_socket.settimeout(.5)  # Don't use tcpreceive because we need to timeout
         try:
             msg = client_socket.recv(1024).decode()
         except socket.timeout:
-            # no message received
-            pass
+            pass # No Messages Received in the interval
         else:
             if msg.strip().lower() == "log off":
                 # Close Everything Important and remove visibility for other clients
                 print("Logging Off...")
+                if connectedTo != "unreachableValue":
+                    messageQueue.put((connectedTo, c_id, "END_NOTIF"))
+                    connection_list.remove(c_id)
+                    connection_list.remove(connectedTo)
+                    pass
                 if c_id in availableClients:
                     availableClients.remove(c_id)
                 if c_id in connection_list:
