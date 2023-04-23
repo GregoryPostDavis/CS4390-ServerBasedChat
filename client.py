@@ -1,6 +1,7 @@
 import socket
 import authentication
 import encryption
+import time
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -20,6 +21,14 @@ def tcpreceive(tcp_socket):
     print("Server: ", message)
     return message, server_address
 
+def msgHandler():
+    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_sock.bind((IP,RECV_PORT))
+    tcp_sock.listen()
+    while True:
+        conn, addr = tcp_sock.accept()
+        tcpreceive(conn)
+
 #####################################################
 
 # predefine values
@@ -29,6 +38,9 @@ secret_key = 100
 # UDP socket creation
 IP = '127.0.0.1'
 UDP_PORT = 1234
+
+#########
+RECV_PORT = 0
 
 server_address = (IP, UDP_PORT)
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -63,8 +75,12 @@ while True:
         response = encryption.decrypt_msg(response.decode(), ck_a)
         print("Server: " + response) # Protocol: receive AUTH_SUCCESS(rand_cookie, port_number)
 
-        RAND_COOKIE = response[13:-7] # Extract cookie
-        TCP_PORT = int(response[-5:-1]) # Extract tcp port number
+        RAND_COOKIE = response[13:-13] # Extract cookie
+        TCP_PORT = int(response[-11:-7]) # Extract tcp port number
+        RECV_PORT = int(response[-5:-1])
+        print(response[13:13])
+        print(response[-11:-7])
+        print(response[-5:-1])
 
         #print("\nRand_Cookie: ", RAND_COOKIE)                           # - DEBUG
         #print("TCP Port Numer: ", TCP_PORT)                         # - DEBUG

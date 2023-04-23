@@ -6,8 +6,7 @@ import hashlib
 def cipher_key(rand, secret_key):
     hash_input = str(rand) + str(secret_key)
 
-    ck_a = hashlib.md5(hash_input.encode()) # A8 ALGORITHM
-
+    ck_a = hashlib.sha512(hash_input.encode()) # A8 ALGORITHM
     return ck_a.hexdigest()
 
 # FUNCTION FOR ENCRYPTING AUTH_SUCCESS MESSAGE

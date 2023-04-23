@@ -52,9 +52,10 @@ if client_id in subscriber_search:
     # Checking xres and res
     if authentication.check_hash(xres, res):
         TCP_PORT = 5678 # temporary port allocation
+        REC_PORT = 4545 # temporary listening port allocation
         # Encryption
         ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search['clientA'])
-        message = f"AUTH_SUCCESS({RAND_COOKIE}, {TCP_PORT})"
+        message = f"AUTH_SUCCESS({RAND_COOKIE}, {TCP_PORT}, {REC_PORT})"
         print("You: " + message)
         udp_socket.sendto(encryption.encrypt_msg(ck_a, message).encode(), client_address) # Protocol: send AUTH_SUCCESS(rand_cookie, port_number)
     else:
