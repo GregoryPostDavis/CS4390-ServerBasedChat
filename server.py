@@ -44,11 +44,6 @@ def createClientConnection(c_id, c_addr):
         tcpsend(client_socket, "CONNECTED\n")
         availableClients.append(c_id)
 
-    # Message Logging (To Text File)
-    # now = datetime.now()
-    # fName = now.strftime("%H.%M.%S.txt")
-    # f = open(fName, 'a')  # Opens and appends text to file if one does not exist
-
     # Connection
     connectedTo = "unreachableValue"
     desiredConnection = " "
@@ -75,7 +70,7 @@ def createClientConnection(c_id, c_addr):
         try:
             msg = client_socket.recv(1024).decode()
         except socket.timeout:
-            pass # No Messages Received in the interval
+            pass  # No Messages Received in the interval
         else:
             if msg.strip().lower() == "log off":
                 # Close Everything Important and remove visibility for other clients
@@ -98,7 +93,6 @@ def createClientConnection(c_id, c_addr):
 
             elif msg.strip().lower().startswith("connect"):
                 connectTo = msg[7:].strip()
-                # print("Sending a Connection Request ", connectTo)
                 if connectTo in subscriber_search and connectTo in availableClients:
                     print("Sending a connection request to connect with ", connectTo)
                     desiredConnection = connectTo
@@ -116,12 +110,8 @@ def createClientConnection(c_id, c_addr):
                 availableClients.append(c_id)
             elif msg:
                 pass
-                # If not a 'log off' message, write to log file
-                # strToWrite = client_id + ": " + msg
-                # f.write(strToWrite)
-                # f.write("\n")
-                #  Add message to message queue
 
+            # Add Message to Queue
             messageQueue.put((connectedTo, c_id, msg))  # Destination, Source, Message
 
 
