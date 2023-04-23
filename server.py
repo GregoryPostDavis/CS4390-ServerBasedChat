@@ -63,7 +63,7 @@ def createClientConnection(c_id, c_addr):
                     connection_list.append(c_id)
                     availableClients.remove(c_id)
                     connectionRequests.remove(items)
-                    messageQueue.put((c_id,c_id,("CHAT STARTED WITH " + connectedTo)))
+                    messageQueue.put((c_id, c_id, ("CHAT STARTED(" + connectedTo + ")")))
         else:
             if c_id not in connection_list:
                 desiredConnection = " "
