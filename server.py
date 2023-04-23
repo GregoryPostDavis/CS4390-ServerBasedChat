@@ -99,7 +99,7 @@ def createClientConnection(c_id, c_addr):
                     connectionRequests.append((connectTo, c_id.strip(), client_socket))
                 else:
                     print("Cannot connect you to ", connectTo)
-                    messageQueue.put((c_id, c_id, "UNREACHABLE"))
+                    messageQueue.put((c_id, c_id, ("UNREACHABLE "+ connectedTo)))
 
             elif msg.strip() == "END_REQUEST":
                 messageQueue.put((connectedTo, c_id, "END_NOTIF"))
@@ -144,7 +144,10 @@ def messageHandler():
                 # print(currentMessage[0]) debug
                 # print(RECV_PORT) debug
                 tcp_sock.connect((IP, RECV_PORT))
-                tcpsend(tcp_sock, currentMessage[2])
+                if currentMessage[0] == currentMessage[1]:
+                    tcpsend(tcp_sock, ("Server: " + currentMessage[2]))
+                else:
+                    tcpsend(tcp_sock, (currentMessage[1] + ": " + currentMessage[2]))
                 tcp_sock.close()
                 tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 # print(currentMessage[2])
