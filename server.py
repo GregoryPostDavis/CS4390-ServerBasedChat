@@ -1,5 +1,4 @@
 import socket
-import struct
 import authentication
 import encryption
 
