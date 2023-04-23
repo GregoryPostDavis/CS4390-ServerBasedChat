@@ -2,6 +2,7 @@ import socket
 import authentication
 import encryption
 import time
+from _thread import *
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -40,7 +41,6 @@ IP = '127.0.0.1'
 UDP_PORT = 1234
 
 #########
-RECV_PORT = 0
 
 server_address = (IP, UDP_PORT)
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -78,9 +78,10 @@ while True:
         RAND_COOKIE = response[13:-13] # Extract cookie
         TCP_PORT = int(response[-11:-7]) # Extract tcp port number
         RECV_PORT = int(response[-5:-1])
-        print(response[13:13])
-        print(response[-11:-7])
-        print(response[-5:-1])
+
+        # print(response[13:13])
+        # print(response[-11:-7])
+        # print(response[-5:-1])
 
         #print("\nRand_Cookie: ", RAND_COOKIE)                           # - DEBUG
         #print("TCP Port Numer: ", TCP_PORT)                         # - DEBUG
@@ -93,14 +94,23 @@ while True:
         tcpsend(tcp_socket, f"CONNECT({RAND_COOKIE})", ck_a) # Protocol: send CONNECT(rand_cookie)
         tcpreceive(tcp_socket) # Protocol: receive CONNECTED
 
+        listenerThread = False
+
         # Send messages
         while True:
+            time.sleep(.1)
             msg = input("You: ")
+            if msg.lower().strip() == "disconnect":
+                msg = "END_REQUEST"
             tcpsend(tcp_socket, msg, ck_a) 
             if msg.strip().lower() == "log off":
-                print("Logging off...\n")
+                # print("Logging off...\n")
                 break
-        break
+            elif msg.strip().lower().startswith("connect") and not listenerThread:  # empty strings are considered false
+                listenerThread = True
+                start_new_thread(msgHandler, ())
+            pass
+
 
 tcp_socket.close()
 print("* TCP connection closed.")
