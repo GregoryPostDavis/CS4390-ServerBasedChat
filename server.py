@@ -2,6 +2,8 @@ import socket
 from datetime import datetime
 from _thread import *
 import queue
+import threading            # FOR CHAT HISTORY FEATURE
+import chatHistory
 
 
 def udpsend(udp_socket, client_address, message):
@@ -89,6 +91,7 @@ def createClientConnection(c_id, c_addr):
                 client_socket.close()
                 tcp_socket.close()
                 print("* TCP connection closed.")
+                connected.clear()                       # SET TO FALSE & USED FOR CHAT HISTORY FEATURE
                 return  # Closes Thread
 
             elif msg.strip().lower().startswith("connect"):
@@ -98,6 +101,7 @@ def createClientConnection(c_id, c_addr):
                     print("Sending a connection request to connect with ", connectTo)
                     desiredConnection = connectTo
                     connectionRequests.append((connectTo, c_id.strip(), client_socket))
+                    connected.set()                    # SET TO TRUE & USED FOR CHAT HISTORY FEATURE
                 else:
                     print("Cannot connect you to ", connectTo)
                     messageQueue.put(c_id, c_id, "UNREACHABLE")
@@ -108,15 +112,31 @@ def createClientConnection(c_id, c_addr):
                 desiredConnection = " "
                 connectedTo = "unreachableValue"
                 availableClients.append(c_id)
+                connected.set()                    # SET TO TRUE & USED FOR CHAT HISTORY FEATURE
+
+            elif msg.lower().startswith("history"):                       # CHAT HISTROY FEATURE
+                    if msg[7:].strip().lower() == c_id.strip().lower():
+                        messageQueue.put((c_id, c_id, "CANNOT SEND CHAT HISTORY TO YOURSELF!"))
+                        pass
+                    else:
+                        #filename = authentication.simple_hash(encryption.encrypt_msg(c_id, client_id))
+                        lines = chatHistory.readhistory("filename.txt")
+                        for line in lines:
+                            messageQueue.put((c_id,c_id,line))
+                        pass
+
             elif msg:
-                pass
+                #pass
                 # If not a 'log off' message, write to log file
                 # strToWrite = client_id + ": " + msg
                 # f.write(strToWrite)
                 # f.write("\n")
                 #  Add message to message queue
-
-            messageQueue.put((connectedTo, c_id, msg))  # Destination, Source, Message
+                messageQueue.put((connectedTo, c_id, msg))  # Destination, Source, Message
+                
+                if connected.is_set():                      # IF CLIENT A AND CLIENT B IS CONNECTED (CONNECTED IS TRUE)
+                    chatHistory.write(c_id, msg)            # ADDS CHAT TO HISTORY
+            
 
 
 def messageHandler():
@@ -143,12 +163,13 @@ def messageHandler():
                 tcpsend(tcp_sock, "END_NOTIF")
                 tcp_sock.close()
                 tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+           
             else:
                 RECV_PORT = recv_search.get(currentMessage[0])
                 # print(currentMessage[0]) debug
                 # print(RECV_PORT) debug
                 tcp_sock.connect((IP, RECV_PORT))
-                tcpsend(tcp_sock, currentMessage[2])
+                tcpsend(tcp_sock, currentMessage[2])        
                 tcp_sock.close()
                 tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 # print(currentMessage[2])
@@ -165,6 +186,7 @@ recv_ports = [("clientA", 4100), ("clientB", 4200), ("clientC", 4300)]  # predef
 recv_search = dict(recv_ports)
 connection_list = []
 connection_search = dict(connection_list)
+connected = threading.Event()        # BOOLEAN VARIABLE SET FALSE BY DEFAULT FOR CHAT HISTORY FEATURE
 
 IP = '127.0.0.1'
 UDP_PORT = 1234
