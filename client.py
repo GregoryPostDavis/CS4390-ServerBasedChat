@@ -16,19 +16,19 @@ def udpreceive(udp_socket):
 def tcpsend(tcp_socket, message, ck_a):
     tcp_socket.send(encryption.encrypt_msg(ck_a, message).encode())
 
-def tcpreceive(tcp_socket):
+def tcpreceive(tcp_socket, ck_a):
     message, server_address = tcp_socket.recvfrom(1024)
     message = encryption.decrypt_msg(message.decode(), ck_a)
     print("Server: ", message)
     return message, server_address
 
-def msgHandler():
+def msgHandler(ck_a):
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_sock.bind((IP,RECV_PORT))
     tcp_sock.listen()
     while True:
         conn, addr = tcp_sock.accept()
-        tcpreceive(conn)
+        tcpreceive(conn, ck_a)
 
 #####################################################
 
@@ -75,13 +75,15 @@ while True:
         response = encryption.decrypt_msg(response.decode(), ck_a)
         print("Server: " + response) # Protocol: receive AUTH_SUCCESS(rand_cookie, port_number)
 
+        print(response[13:13])
+        print(response[-11:-7])
+        print(response[-5:-1])
+
         RAND_COOKIE = response[13:-13] # Extract cookie
         TCP_PORT = int(response[-11:-7]) # Extract tcp port number
         RECV_PORT = int(response[-5:-1])
 
-        # print(response[13:13])
-        # print(response[-11:-7])
-        # print(response[-5:-1])
+
 
         #print("\nRand_Cookie: ", RAND_COOKIE)                           # - DEBUG
         #print("TCP Port Numer: ", TCP_PORT)                         # - DEBUG
@@ -92,7 +94,7 @@ while True:
         print("\n* TCP socket created\n")                               # - DEBUG
 
         tcpsend(tcp_socket, f"CONNECT({RAND_COOKIE})", ck_a) # Protocol: send CONNECT(rand_cookie)
-        tcpreceive(tcp_socket) # Protocol: receive CONNECTED
+        tcpreceive(tcp_socket, ck_a) # Protocol: receive CONNECTED
 
         listenerThread = False
 
@@ -108,7 +110,7 @@ while True:
                 break
             elif msg.strip().lower().startswith("connect") and not listenerThread:  # empty strings are considered false
                 listenerThread = True
-                start_new_thread(msgHandler, ())
+                start_new_thread(msgHandler, ck_a)
             pass
 
 
