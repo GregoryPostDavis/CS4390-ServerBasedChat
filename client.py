@@ -69,10 +69,11 @@ while True:
         udpsend(udp_socket, server_address, f"RESPONSE({client_id}, {res})") # Protocol: send RESPONSE(res)
 
         ck_a = encryption.cipher_key(challenge_message, secret_key)
-        #print("\nCK_A: %s" %(ck_a))                                    # - DEBUG
+        print("\nCK_A: %s" %(ck_a))                                    # - DEBUG
 
         response, server_address = udp_socket.recvfrom(1024)
         response = encryption.decrypt_msg(response.decode(), ck_a)
+        print (ck_a)
         print("Server: " + response) # Protocol: receive AUTH_SUCCESS(rand_cookie, port_number)
 
         print(response[13:13])

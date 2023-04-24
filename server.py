@@ -33,7 +33,7 @@ def createClientConnection(c_id, c_addr):
     client_socket, address = tcp_socket.accept() # Returns client socket and address
     print("\n* TCP socket bound to %s\n" % (TCP_PORT))
 
-    msgs = tcpreceive(client_socket, c_id, ck_a)
+    msgs = tcpreceive(client_socket, c_id, cka_search(c_id))
     if str(RAND_COOKIE) == msgs[8:-1]: # Protocol: send CONNECTED
         tcpsend(tcp_socket, "CONNECTED\n", ck_a)
         availableClients.append(c_id)
@@ -148,6 +148,8 @@ def messageHandler():
 # predefined subscribers
 subscriber_list = [('clientA', (100,4000,4100,"cka")),('clientB', (200,4010,4110,"cka")),('clientC', (300,4020,4120,"cka"))]  # (ID, (Secret Key, Snd Port, Rec Port))
 subscriber_search = dict(subscriber_list)
+cka_list = []
+cka_search = dict(cka_list)
 
 # Client to Server and Client to Client Connection Values
 connection_list = []
@@ -193,8 +195,9 @@ while True:
             TCP_PORT = subscriber_search.get(client_id)[1]  # temporary port allocation
             REC_PORT = subscriber_search.get(client_id)[2]  # temporary listening port allocation
             # Encryption
-            ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search[client_id])
-            subscriber_search.get(client_id)[3] = ck_a
+            ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search[client_id][0])
+            cka_list.append((client_id, ck_a))
+            print(ck_a)
             message = f"AUTH_SUCCESS({RAND_COOKIE}, {TCP_PORT}, {REC_PORT})"
             print("You: " + message)
             udp_socket.sendto(encryption.encrypt_msg(ck_a, message).encode(), client_address) # Protocol: send AUTH_SUCCESS(rand_cookie, port_number)
