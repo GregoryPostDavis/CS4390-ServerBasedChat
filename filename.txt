@@ -1,4 +1,0 @@
-<SESSION-ID> clientA: Howdy cowboy
-<SESSION-ID> clientB: nihaody
-<SESSION-ID> clientB: lets see if history is working
-<SESSION-ID> clientA: yupppp
