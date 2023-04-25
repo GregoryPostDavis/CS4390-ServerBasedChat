@@ -4,9 +4,11 @@ import encryption
 from _thread import *
 import queue
 
+
 def udpsend(udp_socket, client_address, message):
     udp_socket.sendto(message.encode(), client_address)
     print("You: " + message)
+
 
 def udpreceive(udp_socket):
     message, client_address = udp_socket.recvfrom(1024)
@@ -14,26 +16,29 @@ def udpreceive(udp_socket):
     print("Client: " + message)
     return message, client_address
 
+
 def tcpsend(tcp_socket, message, ck_a):
     print("You: " + message)
     tcp_socket.send(encryption.encrypt_msg(ck_a, message).encode())
+
 
 def tcpreceive(client_socket, client_id, ck_a):
     message = encryption.decrypt_msg(client_socket.recv(1024).decode(), ck_a)
     print(f"{client_id}: " + message)
     return message
 
+
 def createClientConnection(c_id, c_addr):
     # TCP Socket
-    TCP_PORT = subscriber_search.get(c_id,None)[1]
+    TCP_PORT = subscriber_search.get(c_id, None)[1]
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_socket.bind((IP, TCP_PORT))
     tcp_socket.listen()
-    ck_a = subscriber_search.get(c_id)[3]
-    client_socket, address = tcp_socket.accept() # Returns client socket and address
+    client_socket, address = tcp_socket.accept()  # Returns client socket and address
     print("\n* TCP socket bound to %s\n" % (TCP_PORT))
-
-    msgs = tcpreceive(client_socket, c_id, cka_search(c_id))
+    print(c_id)
+    print(cka_search.get(c_id))
+    msgs = tcpreceive(client_socket, c_id, cka_search.get(c_id)[1])
     if str(RAND_COOKIE) == msgs[8:-1]: # Protocol: send CONNECTED
         tcpsend(tcp_socket, "CONNECTED\n", ck_a)
         availableClients.append(c_id)
@@ -43,11 +48,11 @@ def createClientConnection(c_id, c_addr):
 
     # Message handling from Client
     while True:
-        if connectedTo == "unreachableValue": # Default value - only used if no connection has been made
+        if connectedTo == "unreachableValue":  # Default value - only used if no connection has been made
             for requests in connectionRequests:
                 if requests[0] == c_id and requests[1] == desiredConnection:
                     connectedTo = requests[1]
-                    desiredConnection = " " # Resets this just to be safe
+                    desiredConnection = " "  # Resets this just to be safe
                     connection_list.append(c_id)
                     availableClients.remove(c_id)
                     connectionRequests.remove(requests)
@@ -146,7 +151,7 @@ def messageHandler():
 
 
 # predefined subscribers
-subscriber_list = [('clientA', (100,4000,4100,"cka")),('clientB', (200,4010,4110,"cka")),('clientC', (300,4020,4120,"cka"))]  # (ID, (Secret Key, Snd Port, Rec Port))
+subscriber_list = [('clientA', (100,4000,4100)),('clientB', (200,4010,4110)),('clientC', (300,4020,4120))]  # (ID, (Secret Key, Snd Port, Rec Port))
 subscriber_search = dict(subscriber_list)
 cka_list = []
 cka_search = dict(cka_list)
@@ -196,8 +201,18 @@ while True:
             REC_PORT = subscriber_search.get(client_id)[2]  # temporary listening port allocation
             # Encryption
             ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search[client_id][0])
-            cka_list.append((client_id, ck_a))
+            print(f"the cka is {ck_a}")
+            # value = (client_id, ck_a)
+            # print(f"Name: {value[0]} \n CKA: {value[1]}")
+            # cka_list.append(value)
+
+            print(client_id)
             print(ck_a)
+            cka_list.append((client_id, ck_a))
+
+            for thing in cka_search:
+                print(thing[0], " ", thing[1])
+
             message = f"AUTH_SUCCESS({RAND_COOKIE}, {TCP_PORT}, {REC_PORT})"
             print("You: " + message)
             udp_socket.sendto(encryption.encrypt_msg(ck_a, message).encode(), client_address) # Protocol: send AUTH_SUCCESS(rand_cookie, port_number)
