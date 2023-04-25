@@ -38,7 +38,7 @@ def createClientConnection(c_id, c_addr):
     print("\n* TCP socket bound to %s\n" % (TCP_PORT))
     print(c_id)
     print(cka_search.get(c_id))
-    msgs = tcpreceive(client_socket, c_id, cka_search.get(c_id)[1])
+    msgs = tcpreceive(client_socket, c_id, cka_search.get(c_id))
     if str(RAND_COOKIE) == msgs[8:-1]: # Protocol: send CONNECTED
         tcpsend(tcp_socket, "CONNECTED\n", ck_a)
         availableClients.append(c_id)
@@ -202,13 +202,11 @@ while True:
             # Encryption
             ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search[client_id][0])
             print(f"the cka is {ck_a}")
-            # value = (client_id, ck_a)
-            # print(f"Name: {value[0]} \n CKA: {value[1]}")
-            # cka_list.append(value)
 
             print(client_id)
             print(ck_a)
             cka_list.append((client_id, ck_a))
+            cka_search = dict(cka_list)
 
             for thing in cka_search:
                 print(thing[0], " ", thing[1])
