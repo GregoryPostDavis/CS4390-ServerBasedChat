@@ -1,3 +1,6 @@
+
+ 
+
 import socket
 import authentication
 import encryption
@@ -24,7 +27,7 @@ def tcpreceive(client_socket, client_id, ck_a):
 #####################################################
 
 # predefined subscribers
-subscriber_list = [('clientA', 100),('clientB', 200),('clientC', 300)]
+subscriber_list = [('clientA', [100, 5678]),('clientB', [200, 4567]),('clientC', [300, 3456])]
 subscriber_search = dict(subscriber_list)
 
 # UDP socket creation
@@ -32,7 +35,6 @@ IP = '127.0.0.1'
 UDP_PORT = 1234
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 udp_socket.bind((IP, UDP_PORT))
 print("\n* UDP socket bound to %s" %(UDP_PORT))
 print("* Waiting for client response...\n")
@@ -44,7 +46,7 @@ client_id = message[6:-1]  # extract the client ID
 # Verification
 if client_id in subscriber_search:
     # Authentication
-    RAND_COOKIE, xres = authentication.server_hash(subscriber_search[client_id])
+    RAND_COOKIE, xres = authentication.server_hash(subscriber_search[client_id][0])
     udpsend(udp_socket, client_address, f"CHALLENGE({RAND_COOKIE})") # Protocol: send CHALLENGE(rand)
 
     message, client_address = udpreceive(udp_socket) # Protocol: receives RESPONSE(client_ID, res)
@@ -52,9 +54,9 @@ if client_id in subscriber_search:
     
     # Checking xres and res
     if authentication.check_hash(xres, res):
-        TCP_PORT = 5678 # temporary port allocation
+        TCP_PORT = subscriber_search[client_id][1] # temporary port allocation
         # Encryption
-        ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search[client_id])
+        ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search[client_id][0])
         message = f"AUTH_SUCCESS({RAND_COOKIE}, {TCP_PORT})"
         print("You: " + message)
         udp_socket.sendto(encryption.encrypt_msg(ck_a, message).encode(), client_address) # Protocol: send AUTH_SUCCESS(rand_cookie, port_number)
@@ -63,7 +65,6 @@ if client_id in subscriber_search:
 
     # TCP connection
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     tcp_socket.bind((IP, TCP_PORT))
     tcp_socket.listen()
     client_socket, address = tcp_socket.accept() # Returns client socket and address

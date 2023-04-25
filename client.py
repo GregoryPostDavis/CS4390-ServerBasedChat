@@ -22,6 +22,10 @@ def tcpreceive(tcp_socket):
 
 #####################################################
 
+# predefine values
+client_id = 'clientA'  # hardcoded client ID: has to be in subscribed users list
+secret_key = 100
+
 # UDP socket creation
 IP = '127.0.0.1'
 UDP_PORT = 1234
@@ -34,7 +38,7 @@ while True:
     val = input("Type 'log on' or 'log off': ")
     if(val.strip().lower() == "log off"):
         udp_socket.close()
-        print("\n* UDP connection closed.\n")
+        print("* UDP connection closed.")
         exit()
     elif(val.strip().lower() == "log on"):
 
@@ -86,4 +90,4 @@ tcp_socket.close()
 print("* TCP connection closed.")
 
 udp_socket.close()
-print("* UDP connection closed.\n")
+print("* UDP connection closed.")
