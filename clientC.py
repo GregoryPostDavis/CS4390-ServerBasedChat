@@ -1,5 +1,5 @@
 import socket
-
+from _thread import *
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -20,6 +20,14 @@ def tcpreceive(tcp_socket):
     message, server_address = tcp_socket.recvfrom(1024)
     print("Server: ", message.decode())
     return message, server_address
+
+def msgHandler():
+    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_sock.bind((IP, RECV_PORT))
+    tcp_sock.listen()
+    while True:
+        conn, addr = tcp_sock.accept()
+        tcpreceive(conn)
 
 #####################################################
 
@@ -56,11 +64,20 @@ rand_cookie = 0
 tcpsend(tcp_socket, f'CONNECT({rand_cookie})')
 tcpreceive(tcp_socket)
 
+listenerThread = False
+
 while True:
     msg = input("You: ")
+    if msg == "disconnect":
+        msg = "END_REQUEST"
     tcpsend(tcp_socket, msg)
     if msg.strip().lower() == "log off":
         break
+    elif msg.strip().lower().startswith("connect") and not listenerThread:  # empty strings are considered false
+        listenerThread = True
+        start_new_thread(msgHandler, ())
+        pass
+
 
 tcp_socket.close()
 print("* TCP connection closed.")

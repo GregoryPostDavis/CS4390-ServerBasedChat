@@ -2,9 +2,11 @@ import socket
 from datetime import datetime
 from _thread import *
 import queue
-import threading            # FOR CHAT HISTORY FEATURE
+import threading            # FOR CHAT HISTORY BOOLEAN VARIABLE
 import chatHistory
-
+import authentication
+import encryption
+import os.path              # FOR CHECKING IF CHAT HISTORY FILE EXISTS
 
 def udpsend(udp_socket, client_address, message):
     udp_socket.sendto(message.encode(), client_address)
@@ -102,6 +104,7 @@ def createClientConnection(c_id, c_addr):
                     desiredConnection = connectTo
                     connectionRequests.append((connectTo, c_id.strip(), client_socket))
                     connected.set()                    # SET TO TRUE & USED FOR CHAT HISTORY FEATURE
+                    filename = authentication.simple_hash(encryption.encrypt_msg(c_id, connectTo))    # GENERATES CHAT HISTORY FILE NAME
                 else:
                     print("Cannot connect you to ", connectTo)
                     messageQueue.put(c_id, c_id, "UNREACHABLE")
@@ -119,11 +122,16 @@ def createClientConnection(c_id, c_addr):
                         messageQueue.put((c_id, c_id, "CANNOT SEND CHAT HISTORY TO YOURSELF!"))
                         pass
                     else:
-                        #filename = authentication.simple_hash(encryption.encrypt_msg(c_id, client_id))
-                        lines = chatHistory.readhistory("filename.txt")
-                        for line in lines:
-                            messageQueue.put((c_id,c_id,line))
-                        pass
+                        if os.path.isfile(filename):                      # CHECKS IF CHAT HISTORY FILE EXISTS
+                            print("File exists")
+                            lines = chatHistory.readhistory(filename)
+                            for line in lines:
+                                messageQueue.put((c_id,c_id,line))
+                                pass
+                            pass
+                        else:
+                            print("File does not exist")
+                            messageQueue.put((c_id,c_id,"CHAT HISTORY DOES NOT EXIST YET!"))
 
             elif msg:
                 #pass
@@ -133,9 +141,9 @@ def createClientConnection(c_id, c_addr):
                 # f.write("\n")
                 #  Add message to message queue
                 messageQueue.put((connectedTo, c_id, msg))  # Destination, Source, Message
-                
-                if connected.is_set():                      # IF CLIENT A AND CLIENT B IS CONNECTED (CONNECTED IS TRUE)
-                    chatHistory.write(c_id, msg)            # ADDS CHAT TO HISTORY
+
+                if connected.is_set():                                  # IF CLIENT A AND CLIENT B IS CONNECTED (CONNECTED IS TRUE)
+                    chatHistory.write(filename, c_id, msg)              # ADDS CHAT TO HISTORY          # NEEDS TO IMPLEMENT SESSION-ID
             
 
 
