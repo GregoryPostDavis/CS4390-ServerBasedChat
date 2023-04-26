@@ -1,5 +1,5 @@
 import socket
-from datetime import datetime
+from datetime import datetime   # FOR SESSION-ID
 from _thread import *
 import queue
 import threading            # FOR CHAT HISTORY BOOLEAN VARIABLE
@@ -115,12 +115,15 @@ def createClientConnection(c_id, c_addr):
                 desiredConnection = " "
                 connectedTo = "unreachableValue"
                 availableClients.append(c_id)
-                connected.set()                    # SET TO TRUE & USED FOR CHAT HISTORY FEATURE
+                connected.clear()                    # SET TO FALSE & USED FOR CHAT HISTORY FEATURE
 
             elif msg.lower().startswith("history"):                       # CHAT HISTROY FEATURE
                     if msg[7:].strip().lower() == c_id.strip().lower():
                         messageQueue.put((c_id, c_id, "CANNOT SEND CHAT HISTORY TO YOURSELF!"))
                         pass
+                    elif msg[7:].strip().lower() != connectedTo.strip().lower():
+                            messageQueue.put((c_id, c_id, "YOU ARE NOT IN SEESION WITH <" + msg[7:] + ">"))
+                            pass
                     else:
                         if os.path.isfile(filename):                      # CHECKS IF CHAT HISTORY FILE EXISTS
                             print("File exists")
@@ -132,6 +135,7 @@ def createClientConnection(c_id, c_addr):
                         else:
                             print("File does not exist")
                             messageQueue.put((c_id,c_id,"CHAT HISTORY DOES NOT EXIST YET!"))
+                        
 
             elif msg:
                 #pass
@@ -140,9 +144,12 @@ def createClientConnection(c_id, c_addr):
                 # f.write(strToWrite)
                 # f.write("\n")
                 #  Add message to message queue
+                #print("connectedTo: " + connectedTo)
                 messageQueue.put((connectedTo, c_id, msg))  # Destination, Source, Message
 
-                if connected.is_set():                                  # IF CLIENT A AND CLIENT B IS CONNECTED (CONNECTED IS TRUE)
+                if connected.is_set():                                  # IF TWO CLIENTS ARE CONNECTED (CONNECTED IS TRUE)
+                    #print("connectedTo: " + connectedTo)
+                    #if connectedTo == "unreachableValue":              # WIP
                     chatHistory.write(filename, c_id, msg)              # ADDS CHAT TO HISTORY          # NEEDS TO IMPLEMENT SESSION-ID
             
 
@@ -186,11 +193,11 @@ def messageHandler():
 #####################################################
 
 # predefined values
-subscriber_list = [('clientA', 100), ('clientB', 200,), ('clientC', 300)]  # predefined subscriber list
+subscriber_list = [('clientA', 100), ('clientB', 200,), ('clientC', 300), ('clientD', 400)]  # predefined subscriber list
 subscriber_search = dict(subscriber_list)
-subscriber_ports = [('clientA', 4000), ('clientB', 4010), ('clientC', 4020)]  # predefined subscriber ports
+subscriber_ports = [('clientA', 4000), ('clientB', 4010), ('clientC', 4020), ('clientD', 4030)]  # predefined subscriber ports
 port_search = dict(subscriber_ports)
-recv_ports = [("clientA", 4100), ("clientB", 4200), ("clientC", 4300)]  # predefined subscriber ports
+recv_ports = [("clientA", 4100), ("clientB", 4200), ("clientC", 4300), ('clientD', 4400)]  # predefined subscriber ports
 recv_search = dict(recv_ports)
 connection_list = []
 connection_search = dict(connection_list)

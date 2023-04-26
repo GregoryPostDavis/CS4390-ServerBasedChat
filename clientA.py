@@ -15,7 +15,7 @@ def tcpsend(tcp_socket, message):
 
 def tcpreceive(tcp_socket):
     message, server_address = tcp_socket.recvfrom(1024)
-    print("Them: ", message.decode())
+    print("Server: ", message.decode())
     return message, server_address
 
 def msgHandler():

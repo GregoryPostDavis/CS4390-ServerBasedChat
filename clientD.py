@@ -30,8 +30,8 @@ def msgHandler():
 #####################################################
 
 # predefine values
-client_id = 'clientB'  # hardcoded client ID: has to be in subscribed users list
-secret_key = 200
+client_id = 'clientD'  # hardcoded client ID: has to be in subscribed users list
+secret_key = 400
 
 IP = "127.0.0.1"
 UDP_PORT = 1234
@@ -50,8 +50,8 @@ response, server_address = udpreceive(udp_socket)
 #   - Generate CK-A key, receive and decrypt the AUTH-SUCCESS message
 
 # TCP Socket
-TCP_PORT = 4010
-RECV_PORT = 4200
+TCP_PORT = 4030
+RECV_PORT = 4400
 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # AF_INET: internet, SOCK_STREAM: TCP
 tcp_socket.connect((IP, TCP_PORT))
 print("\n* TCP socket created\n")  # debug
