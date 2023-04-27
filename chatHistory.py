@@ -1,8 +1,8 @@
 from datetime import datetime
 
-def write(filename, msgfrom, message):
+def write(session_id, filename, msgfrom, message):
     with open(filename, 'a') as file:
-        file.write("<SESSION-ID> ")             # NEEDS UNIQUE SESSION-ID
+        file.write("<" + session_id + "> ")             # NEEDS UNIQUE SESSION-ID
         file.write(msgfrom + ": ")
         file.write(message)
         file.write('\n')

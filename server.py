@@ -66,7 +66,10 @@ def createClientConnection(c_id, c_addr):
                     desiredConnection = " "  # Resets this value just to be safe
                     # print("You have been connected to ", items[1])
                     #tcpsend(tcp_socket, "CHAT_STARTED\n")
+                    #print("im here connection_list.append")
                     connection_list.append(c_id)
+                    time = datetime.now()                           # SEED FOR SESSION-ID
+                    session_id = time.strftime("%Y%m%d%H%M%S")      # SESSION-ID FORMATTED IN SEC & MICROSEC ("%S%f")
                     availableClients.remove(c_id)
                     connectionRequests.remove(items)
         else:
@@ -103,7 +106,9 @@ def createClientConnection(c_id, c_addr):
                     print("Sending a connection request to connect with ", connectTo)
                     desiredConnection = connectTo
                     connectionRequests.append((connectTo, c_id.strip(), client_socket))
-                    connected.set()                    # SET TO TRUE & USED FOR CHAT HISTORY FEATURE
+                    #time = datetime.now()                                                            # SEED FOR SESSION-ID
+                    #session_id = time.strftime("%Y%m%d%H%M%S")                                       # SESSION-ID FORMATTED IN SEC & MICROSEC
+                    connected.set()                                                                   # SET TO TRUE & USED FOR CHAT HISTORY FEATURE
                     filename = authentication.simple_hash(encryption.encrypt_msg(c_id, connectTo))    # GENERATES CHAT HISTORY FILE NAME
                 else:
                     print("Cannot connect you to ", connectTo)
@@ -115,7 +120,7 @@ def createClientConnection(c_id, c_addr):
                 desiredConnection = " "
                 connectedTo = "unreachableValue"
                 availableClients.append(c_id)
-                connected.clear()                    # SET TO FALSE & USED FOR CHAT HISTORY FEATURE
+                connected.clear()                                         # SET TO FALSE & USED FOR CHAT HISTORY FEATURE
 
             elif msg.lower().startswith("history"):                       # CHAT HISTROY FEATURE
                     if msg[7:].strip().lower() == c_id.strip().lower():
@@ -149,8 +154,7 @@ def createClientConnection(c_id, c_addr):
 
                 if connected.is_set():                                  # IF TWO CLIENTS ARE CONNECTED (CONNECTED IS TRUE)
                     #print("connectedTo: " + connectedTo)
-                    #if connectedTo == "unreachableValue":              # WIP
-                    chatHistory.write(filename, c_id, msg)              # ADDS CHAT TO HISTORY          # NEEDS TO IMPLEMENT SESSION-ID
+                    chatHistory.write(session_id, filename, c_id, msg)  # ADDS CHAT TO HISTORY
             
 
 
@@ -201,7 +205,9 @@ recv_ports = [("clientA", 4100), ("clientB", 4200), ("clientC", 4300), ('clientD
 recv_search = dict(recv_ports)
 connection_list = []
 connection_search = dict(connection_list)
-connected = threading.Event()        # BOOLEAN VARIABLE SET FALSE BY DEFAULT FOR CHAT HISTORY FEATURE
+connected = threading.Event()               # BOOLEAN VARIABLE SET FALSE BY DEFAULT FOR CHAT HISTORY FEATURE
+#time = datetime.now()                      # SEED FOR SESSION-ID
+#session_id = time.strftime("%S%f")         # SESSION-ID FORMATTED IN SEC & MICROSEC
 
 IP = '127.0.0.1'
 UDP_PORT = 1234
