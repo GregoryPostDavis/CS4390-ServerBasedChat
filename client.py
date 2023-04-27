@@ -14,6 +14,7 @@ def udpreceive(udp_socket):
     return response, server_address
 
 def tcpsend(tcp_socket, message, ck_a):
+    # print(f"Sending: {message}")
     tcp_socket.send(encryption.encrypt_msg(ck_a, message).encode())
 
 def tcpreceive(tcp_socket, ck_a):
@@ -22,7 +23,7 @@ def tcpreceive(tcp_socket, ck_a):
     print("Server: ", message)
     return message, server_address
 
-def msgHandler(ck_a):
+def msgHandler(ck_a, filler):
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_sock.bind((IP,RECV_PORT))
     tcp_sock.listen()
@@ -33,8 +34,8 @@ def msgHandler(ck_a):
 #####################################################
 
 # predefine values
-client_id = 'clientA'  # hardcoded client ID: has to be in subscribed users list
-secret_key = 100
+#client_id = 'clientA'  # hardcoded client ID: has to be in subscribed users list
+#secret_key = 100
 
 # UDP socket creation
 IP = '127.0.0.1'
@@ -73,18 +74,16 @@ while True:
 
         response, server_address = udp_socket.recvfrom(1024)
         response = encryption.decrypt_msg(response.decode(), ck_a)
-        print (ck_a)
-        print("Server: " + response) # Protocol: receive AUTH_SUCCESS(rand_cookie, port_number)
+        # print (ck_a)
+        # print("Server: " + response) # Protocol: receive AUTH_SUCCESS(rand_cookie, port_number)
+        #
+        # print(response[13:13])
+        # print(response[-11:-7])
+        # print(response[-5:-1])
 
-        print(response[13:13])
-        print(response[-11:-7])
-        print(response[-5:-1])
-
-        RAND_COOKIE = response[13:-13] # Extract cookie
-        TCP_PORT = int(response[-11:-7]) # Extract tcp port number
+        RAND_COOKIE = response[13:-13]  # Extract cookie
+        TCP_PORT = int(response[-11:-7])  # Extract tcp port number
         RECV_PORT = int(response[-5:-1])
-
-
 
         #print("\nRand_Cookie: ", RAND_COOKIE)                           # - DEBUG
         #print("TCP Port Numer: ", TCP_PORT)                         # - DEBUG
@@ -92,15 +91,25 @@ while True:
         # TCP Socket establishment
         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         tcp_socket.connect((IP, TCP_PORT))
+        print(TCP_PORT)
+
         print("\n* TCP socket created\n")                               # - DEBUG
 
         tcpsend(tcp_socket, f"CONNECT({RAND_COOKIE})", ck_a) # Protocol: send CONNECT(rand_cookie)
-        tcpreceive(tcp_socket, ck_a) # Protocol: receive CONNECTED
+
+        #RECV CONNECTED
+        message, server_address = tcp_socket.recvfrom(1024)
+        message = encryption.decrypt_msg(message.decode(), ck_a)
+        print(message)
 
         listenerThread = False
 
         # Send messages
         while True:
+            if not listenerThread:
+                listenerThread = True
+                start_new_thread(msgHandler, (ck_a, ()))
+                print("Starting Listener Thread")
             time.sleep(.1)
             msg = input("You: ")
             if msg.lower().strip() == "disconnect":
@@ -109,9 +118,7 @@ while True:
             if msg.strip().lower() == "log off":
                 # print("Logging off...\n")
                 break
-            elif msg.strip().lower().startswith("connect") and not listenerThread:  # empty strings are considered false
-                listenerThread = True
-                start_new_thread(msgHandler, ck_a)
+
             pass
 
 
