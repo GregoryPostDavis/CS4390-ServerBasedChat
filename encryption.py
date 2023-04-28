@@ -39,7 +39,7 @@ def encrypt_msg(ck_a, msg):
 
    
 # FUNCTION FOR DECRYPTING MESSAGE
-def decrypt_msg(message , ck_a):
+def decrypt_msg(message, ck_a):
     cipher_key = ck_a                    # XOR ENCRYPTION KEY
 
     if isinstance(message, bytes):       # IF MESSAGE IS BYTE TYPE

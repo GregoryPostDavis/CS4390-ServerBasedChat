@@ -26,7 +26,7 @@ def testSend(tcp_socket, message):
     tcp_socket.send(message)
 
 def tcpreceive(client_socket, client_id, ck_a):
-    message = encryption.decrypt_msg(client_socket.recv(1024).decode(), ck_a)
+    message = encryption.decrypt_msg(client_socket.recv(1024).decode(), cka_search.get(client_id))
     print(f"{client_id}: " + message)
     return message
 
@@ -60,7 +60,7 @@ def createClientConnection(c_id, c_addr):
                     desiredConnection = " "  # Resets this just to be safe
                     connection_list.append(c_id)
                     availableClients.remove(c_id)
-                    messageQueue.put((c_id, c_id, (encryption.encrypt_msg(ck_a, ("CHAT STARTED(" + connectedTo + ")")).encode())))
+                    messageQueue.put((c_id, c_id, (encryption.encrypt_msg(cka_search.get(c_id), ("CHAT STARTED(" + connectedTo + ")")).encode())))
                     connectionRequests.remove(requests)
         else:
             if c_id not in connection_list:
@@ -83,7 +83,7 @@ def createClientConnection(c_id, c_addr):
             if msg.strip().lower() == "log off":
                 # Close Everything important and remove visibility from other clients
                 if connectedTo != "unreachableValue":
-                    messageQueue.put((connectedTo, c_id, (encryption.encrypt_msg(ck_a, "END_NOTIF").encode())))
+                    messageQueue.put((connectedTo, c_id, (encryption.encrypt_msg(cka_search.get(connectedTo), "END_NOTIF").encode())))
                     connection_list.remove(c_id)
                     connection_list.remove(connectedTo)
                     pass
@@ -105,10 +105,10 @@ def createClientConnection(c_id, c_addr):
                     connectionRequests.append((connectTo.strip(), c_id.strip(), client_socket))
                 else:
                     print("Cannot connect you to ", connectTo)
-                    messageQueue.put((c_id, c_id, encryption.encrypt_msg(ck_a, ("UNREACHABLE " + connectedTo)).encode()))
+                    messageQueue.put((c_id, c_id, encryption.encrypt_msg(cka_search.get(c_id), ("UNREACHABLE " + connectedTo)).encode()))
 
             elif msg.strip() == "END_REQUEST":
-                messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(ck_a, ("END_NOTIF")).encode()))
+                messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(cka_search.get(connectedTo), ("END_NOTIF")).encode()))
                 connection_list.remove(c_id)
                 connection_list.remove(connectedTo)
                 desiredConnection = " "
@@ -119,7 +119,10 @@ def createClientConnection(c_id, c_addr):
 
             #Message Handling
             #print("Putting message in queue")
-            messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(ck_a, msg).encode()))
+            if connectedTo == "unreachableValue":
+                messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(ck_a, msg).encode()))
+            else:
+                messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(cka_search.get(c_id), msg).encode()))
 
 
 
