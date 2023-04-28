@@ -1,6 +1,7 @@
 import socket
 import authentication
 import encryption
+import _thread
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -44,6 +45,7 @@ while True:
 
         client_id = input("Enter username: ") #Has to be in subscribed users list
         secret_key = input("Enter secret key: ")                  # LOG ON
+        print()
 
         # Logged on
         udpsend(udp_socket, server_address, f"HELLO({client_id})") # Protocol: send HELLO(client_ID)

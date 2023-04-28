@@ -1,6 +1,4 @@
-
- 
-
+from _thread import *
 import socket
 import authentication
 import encryption
@@ -24,52 +22,8 @@ def tcpreceive(client_socket, client_id, ck_a):
     print(f"{client_id}: " + message)
     return message
 
-#####################################################
-
-# predefined subscribers
-subscriber_list = [('clientA', [100, 5678]),('clientB', [200, 4567]),('clientC', [300, 3456])]
-subscriber_search = dict(subscriber_list)
-
-# UDP socket creation
-IP = '127.0.0.1'
-UDP_PORT = 1234
-
-udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-udp_socket.bind((IP, UDP_PORT))
-print("\n* UDP socket bound to %s" %(UDP_PORT))
-print("* Waiting for client response...\n")
-
-# Client log on
-message, client_address = udpreceive(udp_socket) # Protocol: receive HELLO(client_ID)
-client_id = message[6:-1]  # extract the client ID
-
-# Verification
-if client_id in subscriber_search:
-    # Authentication
-    RAND_COOKIE, xres = authentication.server_hash(subscriber_search[client_id][0])
-    udpsend(udp_socket, client_address, f"CHALLENGE({RAND_COOKIE})") # Protocol: send CHALLENGE(rand)
-
-    message, client_address = udpreceive(udp_socket) # Protocol: receives RESPONSE(client_ID, res)
-    res = message[18:-1]
-    
-    # Checking xres and res
-    if authentication.check_hash(xres, res):
-        TCP_PORT = subscriber_search[client_id][1] # temporary port allocation
-        # Encryption
-        ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search[client_id][0])
-        message = f"AUTH_SUCCESS({RAND_COOKIE}, {TCP_PORT})"
-        print("You: " + message)
-        udp_socket.sendto(encryption.encrypt_msg(ck_a, message).encode(), client_address) # Protocol: send AUTH_SUCCESS(rand_cookie, port_number)
-    else:
-        udpsend(udp_socket, client_address, "AUTH_FAIL")
-
-    # TCP connection
-    tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcp_socket.bind((IP, TCP_PORT))
-    tcp_socket.listen()
-    client_socket, address = tcp_socket.accept() # Returns client socket and address
-    print("\n* TCP socket bound to %s\n" %(TCP_PORT))
-
+def createClientConnection(client_socket, client_id, ck_a):
+    # TCP Socket
     message = tcpreceive(client_socket, client_id, ck_a) # Protocol: receive CONNECT(rand_cookie)
     if str(RAND_COOKIE) == message[8:-1]: # Protocol: send CONNECTED
         tcpsend(client_socket, "CONNECTED\n", ck_a)
@@ -84,8 +38,66 @@ if client_id in subscriber_search:
     client_socket.close()
     tcp_socket.close()
     print("* TCP connection closed.")
-else:
-    print("* Client is not in the subscriber list.")
+
+#####################################################
+
+# predefined subscribers
+subscriber_list = [('clientA', [100, 5678]),('clientB', [200, 4567]),('clientC', [300, 3456])]
+subscriber_search = dict(subscriber_list)
+cka_list = []
+cka_search = dict(cka_list)
+
+# UDP socket creation
+IP = '127.0.0.1'
+UDP_PORT = 1234
+
+udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udp_socket.bind((IP, UDP_PORT))
+print("\n* UDP socket bound to %s" %(UDP_PORT))
+print("* Waiting for client response...\n")
+
+while True:
+    print("* While loop starting...\n")
+
+    # Client log on
+    message, client_address = udpreceive(udp_socket) # Protocol: receive HELLO(client_ID)
+    client_id = message[6:-1]  # extract the client ID
+
+    # Verification
+    if client_id in subscriber_search:
+        # Authentication
+        RAND_COOKIE, xres = authentication.server_hash(subscriber_search[client_id][0])
+        udpsend(udp_socket, client_address, f"CHALLENGE({RAND_COOKIE})") # Protocol: send CHALLENGE(rand)
+
+        message, client_address = udpreceive(udp_socket) # Protocol: receives RESPONSE(client_ID, res)
+        res = message[18:-1]
+        
+        # Checking xres and res
+        if authentication.check_hash(xres, res):
+            TCP_PORT = subscriber_search[client_id][1] # temporary port allocation
+            # Encryption
+            ck_a = encryption.cipher_key(RAND_COOKIE, subscriber_search[client_id][0])
+            cka_list.append((client_id, ck_a))
+            cka_search = dict(cka_list)
+            message = f"AUTH_SUCCESS({RAND_COOKIE}, {TCP_PORT})"
+            print("You: " + message)
+            udp_socket.sendto(encryption.encrypt_msg(ck_a, message).encode(), client_address) # Protocol: send AUTH_SUCCESS(rand_cookie, port_number)
+        else:
+            udpsend(udp_socket, client_address, "AUTH_FAIL")
+
+        # TCP connection
+        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        tcp_socket.bind((IP, TCP_PORT))
+        tcp_socket.listen()
+        client_socket, address = tcp_socket.accept() # Returns client socket and address
+        print("\n* TCP socket bound to %s\n" %(TCP_PORT))
+
+        start_new_thread(createClientConnection, (client_socket, client_id, ck_a))
+
+    else:
+        print("* Client is not in the subscriber list.")
+        break
 
 udp_socket.close()
 print("* UDP connection closed.")
