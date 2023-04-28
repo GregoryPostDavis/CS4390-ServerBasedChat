@@ -49,17 +49,17 @@ print("\n* UDP socket created\n")
 
 while True:
     val = input("Type 'log on' or 'log off': ")
-    if(val.strip().lower() == "log off"):
+    if val.strip().lower() == "log off":
         udp_socket.close()
         print("* UDP connection closed.")
         exit()
-    elif(val.strip().lower() == "log on"):
+    elif val.strip().lower() == "log on":
 
-        client_id = input("Enter username: ") #Has to be in subscribed users list
+        client_id = input("Enter username: ")  # Has to be in subscribed users list
         secret_key = input("Enter secret key: ")                  # LOG ON
 
         # Logged on
-        udpsend(udp_socket, server_address, f"HELLO({client_id})") # Protocol: send HELLO(client_ID)
+        udpsend(udp_socket, server_address, f"HELLO({client_id})")  # Protocol: send HELLO(client_ID)
 
         # Authentication
         response, server_address = udpreceive(udp_socket) # Protocol: receive CHALLENGE(rand)
@@ -67,7 +67,7 @@ while True:
         challenge_message = challenge_message[10:-1] # Extract rand
 
         res = authentication.client_hash(challenge_message, secret_key)
-        udpsend(udp_socket, server_address, f"RESPONSE({client_id}, {res})") # Protocol: send RESPONSE(res)
+        udpsend(udp_socket, server_address, f"RESPONSE({client_id}, {res})")  # Protocol: send RESPONSE(res)
 
         ck_a = encryption.cipher_key(challenge_message, secret_key)
         print("\nCK_A: %s" %(ck_a))                                    # - DEBUG

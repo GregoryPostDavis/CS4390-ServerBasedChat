@@ -60,7 +60,7 @@ def createClientConnection(c_id, c_addr):
     connectedTo = "unreachableValue"
     desiredConnection = " "
 
-    print("I make it here")
+
 
     # Message handling from Client
     while True:
@@ -71,8 +71,8 @@ def createClientConnection(c_id, c_addr):
                     # desiredConnection = " "  # Resets this just to be safe
                     connection_list.append(c_id)
                     availableClients.remove(c_id)
+                    messageQueue.put((c_id, c_id, (encryption.encrypt_msg(ck_a, ("CHAT STARTED(" + connectedTo + ")")).encode())))
                     connectionRequests.remove(requests)
-                    messageQueue.put((c_id, c_id, (encryption.encrypt_msg(ck_a, ("CHAT STARTED(" + connectedTo + ")"))).encode()))
                 else:
                     if c_id not in connection_list:
                         print(c_id, requests[0], desiredConnection, requests[1])
@@ -129,7 +129,7 @@ def createClientConnection(c_id, c_addr):
                     pass
 
                 #Message Handling
-                print("Putting message in queue")
+                #print("Putting message in queue")
                 messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(ck_a, msg).encode()))
 
 
@@ -140,13 +140,14 @@ def messageHandler():
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while True:
         if not messageQueue.empty():
-            print("Message in Queue")
+            #print("Message in Queue")
             encryptedMessage = messageQueue.get()
             currentMessage = encryption.decrypt_msg(encryptedMessage[2].decode(), ck_a)
             if currentMessage[2].lower().startswith("connect "):
-                if currentMessage[0].strip().lower() == currentMessage[1].strip.lower():
+                if currentMessage[0].strip().lower() == currentMessage[1].strip.lower(): #(Connect To, Client ID, Socket)
                     pass  # ignore clients trying to connect to themselves
                 elif currentMessage[2][7:].strip().lower() in subscriber_search:
+                    print("in sub search")
                     RECV_PORT = subscriber_search.get(currentMessage[2][2][7:])
                     tcp_sock.connect((IP, RECV_PORT))
                     tcpsend(tcp_sock, ("CHAT REQUEST", currentMessage[1]), ck_a)
