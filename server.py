@@ -37,30 +37,19 @@ def createClientConnection(c_id, c_addr):
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_socket.bind((IP, TCP_PORT))
     tcp_socket.listen()
-
     cka = cka_search.get(c_id)
 
     client_socket, address = tcp_socket.accept()  # Returns client socket and address
     print("\n* TCP socket bound to %s\n" % (TCP_PORT))
 
-
     msgs = tcpreceive(client_socket, c_id, cka_search.get(c_id))
     if str(RAND_COOKIE) == msgs[8:-1]: # Protocol: send CONNECTED
-        try:
             tcpsend(client_socket, "CONNECTED\n", ck_a)
             availableClients.append(c_id)
-        except:
-            tcp_socket.close()
-            tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tcp_socket.bind((IP, TCP_PORT))
-            time.sleep(.1)
-            tcpsend(tcp_socket, "CONNECTED\n", ck_a)
 
     #Connection
     connectedTo = "unreachableValue"
     desiredConnection = " "
-
-
 
     # Message handling from Client
     while True:
@@ -68,69 +57,69 @@ def createClientConnection(c_id, c_addr):
             for requests in connectionRequests:
                 if requests[0] == c_id and requests[1] == desiredConnection:
                     connectedTo = requests[1]
-                    # desiredConnection = " "  # Resets this just to be safe
+                    desiredConnection = " "  # Resets this just to be safe
                     connection_list.append(c_id)
                     availableClients.remove(c_id)
                     messageQueue.put((c_id, c_id, (encryption.encrypt_msg(ck_a, ("CHAT STARTED(" + connectedTo + ")")).encode())))
                     connectionRequests.remove(requests)
-                else:
-                    if c_id not in connection_list:
-                        print(c_id, requests[0], desiredConnection, requests[1])
-                        time.sleep(2)
-                        # Reset Default Values
-                        desiredConnection = " "
-                        connectedTo = "unreachableValue"
-                        if c_id not in availableClients:
-                            availableClients.append(c_id)
-            client_socket.settimeout(.5)  # Don't use tcpreceive because we need to timeout
-            try:
-                msg = client_socket.recv(1024)
-                msg = encryption.decrypt_msg(msg.decode(), cka)
-                # print(msg)
-            except socket.timeout:
-                pass  # No messages received in the timeout interval
-            else:
-                # print("msg rcvd")
-                if msg.strip().lower() == "log off":
-                    # Close Everything important and remove visibility from other clients
-                    if connectedTo != "unreachableValue":
-                        messageQueue.put((connectedTo, c_id, (encryption.encrypt_msg(ck_a, "END_NOTIF").encode())))
-                        connection_list.remove(c_id)
-                        connection_list.remove(connectedTo)
-                        pass
-                    if c_id in availableClients:
-                        availableClients.remove(c_id)
-                    if c_id in connection_list:
-                        connection_list.remove(c_id)
-
-                    client_socket.close()
-                    tcp_socket.close()
-                    print("* TCP connection closed.")
-                    return
-
-                elif msg.strip().lower().startswith("connect"):
-                    connectTo = msg[7:].strip()
-                    if connectTo in subscriber_search and connectTo in availableClients:
-                        print("Sending a connection request to", connectTo)
-                        desiredConnection = connectTo
-                        connectionRequests.append((connectTo.strip(), c_id.strip(), client_socket))
-                    else:
-                        print("Cannot connect you to ", connectTo)
-                        messageQueue.put((c_id, c_id, encryption.encrypt_msg(ck_a, ("UNREACHABLE " + connectedTo)).encode()))
-
-                elif msg.strip() == "END_REQUEST":
-                    messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(ck_a, ("END_NOTIF")).encode()))
+        else:
+            if c_id not in connection_list:
+                print(c_id, requests[0], desiredConnection, requests[1])
+                time.sleep(2)
+                # Reset Default Values
+                desiredConnection = " "
+                connectedTo = "unreachableValue"
+                if c_id not in availableClients:
+                    availableClients.append(c_id)
+        client_socket.settimeout(.5)  # Don't use tcpreceive because we need to timeout
+        try:
+            msg = client_socket.recv(1024)
+            msg = encryption.decrypt_msg(msg.decode(), cka)
+            # print(msg)
+        except socket.timeout:
+            pass  # No messages received in the timeout interval
+        else:
+            # print("msg rcvd")
+            if msg.strip().lower() == "log off":
+                # Close Everything important and remove visibility from other clients
+                if connectedTo != "unreachableValue":
+                    messageQueue.put((connectedTo, c_id, (encryption.encrypt_msg(ck_a, "END_NOTIF").encode())))
                     connection_list.remove(c_id)
                     connection_list.remove(connectedTo)
-                    desiredConnection = " "
-                    connectedTo = "unreachableValue"
-                    availableClients.append(c_id)
-                elif msg:
                     pass
+                if c_id in availableClients:
+                    availableClients.remove(c_id)
+                if c_id in connection_list:
+                    connection_list.remove(c_id)
 
-                #Message Handling
-                #print("Putting message in queue")
-                messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(ck_a, msg).encode()))
+                client_socket.close()
+                tcp_socket.close()
+                print("* TCP connection closed.")
+                return
+
+            elif msg.strip().lower().startswith("connect"):
+                connectTo = msg[7:].strip()
+                if connectTo in subscriber_search and connectTo in availableClients:
+                    print("Sending a connection request to", connectTo)
+                    desiredConnection = connectTo
+                    connectionRequests.append((connectTo.strip(), c_id.strip(), client_socket))
+                else:
+                    print("Cannot connect you to ", connectTo)
+                    messageQueue.put((c_id, c_id, encryption.encrypt_msg(ck_a, ("UNREACHABLE " + connectedTo)).encode()))
+
+            elif msg.strip() == "END_REQUEST":
+                messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(ck_a, ("END_NOTIF")).encode()))
+                connection_list.remove(c_id)
+                connection_list.remove(connectedTo)
+                desiredConnection = " "
+                connectedTo = "unreachableValue"
+                availableClients.append(c_id)
+            elif msg:
+                pass
+
+            #Message Handling
+            #print("Putting message in queue")
+            messageQueue.put((connectedTo, c_id, encryption.encrypt_msg(ck_a, msg).encode()))
 
 
 
@@ -142,35 +131,45 @@ def messageHandler():
         if not messageQueue.empty():
             #print("Message in Queue")
             encryptedMessage = messageQueue.get()
-            currentMessage = encryption.decrypt_msg(encryptedMessage[2].decode(), ck_a)
+            # print(encryptedMessage[0])
+            # print(encryptedMessage[1])
+            # print(encryption.decrypt_msg(encryptedMessage[2].decode(), ck_a))
+            # print(encryption.decrypt_msg(encryptedMessage[2].decode(), ck_a)[7:])
+
+            currentMessage = (encryptedMessage[0], encryptedMessage[1], encryption.decrypt_msg(encryptedMessage[2].decode(), cka_search.get(encryptedMessage[1])))
             if currentMessage[2].lower().startswith("connect "):
-                if currentMessage[0].strip().lower() == currentMessage[1].strip.lower(): #(Connect To, Client ID, Socket)
+                if currentMessage[0].strip().lower() == currentMessage[1].strip().lower(): #(Connect To, Client ID, Socket)
                     pass  # ignore clients trying to connect to themselves
-                elif currentMessage[2][7:].strip().lower() in subscriber_search:
-                    print("in sub search")
-                    RECV_PORT = subscriber_search.get(currentMessage[2][2][7:])
+                elif currentMessage[2][7:].strip() in subscriber_search:
+                    # print("in sub search")
+                    # print(f"!!! {currentMessage[2][7:]}")
+                    # print(f"!!!!!{(subscriber_search.get(currentMessage[2][7:].strip()))[2]}")
+                    RECV_PORT = (subscriber_search.get(currentMessage[2][7:].strip()))[2]
                     tcp_sock.connect((IP, RECV_PORT))
-                    tcpsend(tcp_sock, ("CHAT REQUEST", currentMessage[1]), ck_a)
+                    tcpsend(tcp_sock, ("CHAT REQUEST: " + currentMessage[1]), ck_a)
                     tcp_sock.close()
                     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                elif currentMessage[0] == "unreachableValue":
-                    print(currentMessage[2])
-                    pass  # ignore messages that are sent to nobody
-                elif currentMessage[2] == "END_REQUEST":
-                    RECV_PORT = subscriber_search.get(currentMessage[0][2])
-                    tcp_sock.connect((IP, RECV_PORT))
-                    tcpsend(tcp_sock, "END_NOTIF", ck_a)
-                    tcp_sock.close()
-                    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            elif currentMessage[0] == "unreachableValue":
+                print(currentMessage[2])
+                pass  # ignore messages that are sent to nobody
+            elif currentMessage[2] == "END_REQUEST":
+                RECV_PORT = subscriber_search.get(currentMessage[0])[2]
+                tcp_sock.connect((IP, RECV_PORT))
+                tcpsend(tcp_sock, "END_NOTIF", cka_search.get(currentMessage[0]))
+                tcp_sock.close()
+                tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            else:
+                print((subscriber_search.get(currentMessage[0]))[2])
+                RECV_PORT = (subscriber_search.get(currentMessage[0]))[2]
+                tcp_sock.close()
+                tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcp_sock.connect((IP, RECV_PORT))
+                if currentMessage[0] == currentMessage[1]:
+                    tcpsend(tcp_sock, ("Server: " + currentMessage[2]), cka_search.get(currentMessage[0]))
                 else:
-                    RECV_PORT = subscriber_search.get(currentMessage[0][2])
-                    tcp_sock.connect((IP, RECV_PORT))
-                    if currentMessage[0] == currentMessage[1]:
-                        tcpsend(tcp_sock, ("Server: " + currentMessage[2]), ck_a)
-                    else:
-                        tcpsend(tcp_sock, (currentMessage[1] + ": " + currentMessage[2]), ck_a)
-                        tcp_sock.close()
-                        tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    tcpsend(tcp_sock, (currentMessage[1] + ": " + currentMessage[2]), cka_search.get(currentMessage[0]))
+                    tcp_sock.close()
+                    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 #####################################################
 
