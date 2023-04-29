@@ -25,13 +25,17 @@ def tcpreceive(tcp_socket, ck_a, bool):
         print(message) # receiving messages from another user
     return message, server_address
 
-def receive(tcp_socket, ck_a):
-    global session_id
+def chatreceive(tcp_socket, ck_a):
+    global session_id, target_id, flag1
     
     while True:
-        msg, server_address = tcpreceive(tcp_socket, ck_a, False)
+        msg, __ = tcpreceive(tcp_socket, ck_a, False)
         if "CHAT_STARTED" in msg: # Protocol: receive CHAT_STARTED(session_id, client_id)
            session_id = msg[13:-1].split(",")[0]
+           target_id = msg[13:-1].split(",")[1]
+           if flag2 == False:
+               print("\n* Press enter to initiate chat.")
+               flag1 = True # non-initiator
         if "END_NOTIF" in msg:
             print("\n* Chat ended\n")
             return
@@ -40,6 +44,9 @@ def receive(tcp_socket, ck_a):
 
 # predefined variables
 session_id = None
+target_id = None
+flag1 = False
+flag2 = False
 
 # UDP socket creation
 IP = '127.0.0.1'
@@ -92,7 +99,11 @@ while True:
         print("Commands:\n1. Log off: to log off and end connection with the server\n2. Chat (client-ID): to start a chat with another user\n3. End Chat: to end a current chat\n4. History (client-ID): check your past chat messaged exchanged with another user\n")
 
         while True:
-            start_new_thread(receive, (tcp_socket, ck_a)) # receive messages
+            start_new_thread(chatreceive, (tcp_socket, ck_a)) # receive messages
+
+            if flag1 == True:
+                tcpsend(tcp_socket, f"CHAT_CHECK({session_id}, {target_id})", ck_a) # arbitrary protocol: send CHAT_CHECK(session_id, target_id)
+                flag1 = False
 
             msg = input("") # Send messages
 
@@ -101,14 +112,16 @@ while True:
                 target = msg.split(" ")[1]
                 tcpsend(tcp_socket, f"CHAT_REQUEST({target})", ck_a) # Protocol: send CHAT_REQUEST(client_id)
                 print(f"You: CHAT_REQUEST({target})") 
+                flag2 = True # initiator
             elif msg.strip().lower().startswith('end chat'):
                 tcpsend(tcp_socket, f"END_REQUEST({session_id})", ck_a) # Protocol: send END_REQUEST(session_ID)
                 print("\n* Chat ended\n")
-            else:
-                tcpsend(tcp_socket, msg, ck_a)
-            if msg.strip().lower() == "log off":
+                break
+            elif msg.strip().lower() == "log off":
                 print("Logging off...\n")
                 break
+            else:
+                tcpsend(tcp_socket, msg, ck_a)
         break
 
 tcp_socket.close()

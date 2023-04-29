@@ -14,8 +14,11 @@ def udpreceive(udp_socket):
     print("Client: " + message)
     return message, client_address
 
-def tcpsend(tcp_socket, message, ck_a):
-    print("You: " + message)
+def tcpsend(tcp_socket, message, ck_a, bool):
+    if bool == True:
+        print("You: " + message)
+    else:
+        print(message)
     tcp_socket.send(encryption.encrypt_msg(ck_a, message).encode())
 
 def tcpreceive(client_socket, client_id, ck_a):
@@ -23,32 +26,43 @@ def tcpreceive(client_socket, client_id, ck_a):
     print(f"{client_id}: " + message)
     return message
 
-def createClientConnection(client_socket, client_id, ck_a):
+def chat(client_id, target_id, session_id):
+    print("chat starting for ", client_id, "...")
+    while True: # chat starts
+        msg = tcpreceive(connection_search[client_id], client_id, cka_search[client_id])
+        if "END_REQUEST" in msg: # protocol: receive END_REQUEST(session-id)
+            tcpsend(connection_search[target_id], f"END_NOTIF({session_id})", cka_search[target_id], True) # protocol: send END_NOTIF(session-id)
+            return
+        tcpsend(connection_search[target_id], f"{client_id}: {msg}", cka_search[target_id], False) # echo the message to the target
+
+def createClientConnection(client_id):
     global connection_search
 
+    print(f"* Accepting {client_id}'s messages...\n")
+
     while True:
-        msg = tcpreceive(client_socket, client_id, ck_a)
+        msg = tcpreceive(connection_search[client_id], client_id, cka_search[client_id])
         if "CHAT_REQUEST" in msg: # Protocol: CHAT_REQUEST(client-id)
             target_id = msg[13:-1]
-
-            if target_id in subscriber_search and not any('A' in item[1:] for item in session_list):
+            find = [item for item in session_list if target_id in item]
+            if target_id in connection_search and len(find) == 0:
                 time = datetime.now()
                 session_id = time.strftime("%Y%m%d%H%M%S") # implementing session id
-                print(session_id)
                 session_id = 0 # temporary
-                tcpsend(client_socket, f"CHAT_STARTED({session_id}, {client_id})", ck_a) # Protocol: send CHAT_STARTED(session_id, client_id)
-                tcpsend(connection_search[target_id], f"CHAT_STARTED({session_id}, {target_id})", cka_search[target_id])
-                session_list.append((session_id, client_id, target_id))
-                while True: # chat starts
-                    msg = tcpreceive(client_socket, client_id, ck_a)
-                    if "END_REQUEST" in msg: # protocol: receive END_REQUEST(session-id)
-                        tcpsend(connection_search[target_id], f"END_NOTIF({session_id})", cka_search[target_id]) # protocol: send END_NOTIF(session-id)
-                        break
-                    else:
-                        tcpsend(connection_search[target_id], f"{client_id}: {msg}", cka_search[target_id]) # echo the message to the target
 
+                tcpsend(connection_search[client_id], f"CHAT_STARTED({session_id}, {target_id})", cka_search[client_id], True) # Protocol: send CHAT_STARTED(session_id, client_id)
+                tcpsend(connection_search[target_id], f"CHAT_STARTED({session_id}, {client_id})", cka_search[target_id], True)
+                session_list.append((session_id, client_id, target_id))
+
+                chat(client_id, target_id, session_id)
             else:
-                tcpsend(client_socket, f"UNREACHABLE({target_id})", ck_a) # Protocol: send UNREACHABLE(client_id)
+                tcpsend(client_socket, f"UNREACHABLE({target_id})", ck_a, True) # Protocol: send UNREACHABLE(client_id)
+
+        elif "CHAT_CHECK" in msg:
+            print(client_id, " detected incoming chat!")
+            session_id = msg[11:-1].split(",")[0]
+            target_id = msg[11:-1].split(",")[1].strip()
+            chat(client_id, target_id, session_id)
 
         if msg.strip().lower() == "log off":
             print("logging off...\n")
@@ -79,9 +93,6 @@ print("\n* UDP socket bound to %s" %(UDP_PORT))
 print("* Waiting for client response...\n")
 
 while True:
-    print("* DEBUG: While loop starting...")
-    print(f"* DEBUG cka_list: {cka_list}")
-    print(f"* DEBUG connection_list: {connection_list}\n")
 
     # Client log on
     message, client_address = udpreceive(udp_socket) # Protocol: receive HELLO(client_ID)
@@ -115,18 +126,16 @@ while True:
         tcp_socket.bind((IP, TCP_PORT))
         tcp_socket.listen()
         client_socket, address = tcp_socket.accept() # Returns client socket and address
-        print(f"\n* TCP socket bound to {TCP_PORT}")
+        print(f"\n* TCP socket bound to {TCP_PORT}\n")
         connection_list.append((client_id, client_socket))
-        print("These are connected servers: ", connection_list)
         connection_search = dict(connection_list)
 
         # TCP Socket
         message = tcpreceive(client_socket, client_id, ck_a) # Protocol: receive CONNECT(rand_cookie)
         if str(RAND_COOKIE) == message[8:-1]: # Protocol: send CONNECTED
-            tcpsend(client_socket, "CONNECTED\n", ck_a)
-            print(f"* Accepting {client_id}'s messages...\n")
+            tcpsend(client_socket, "CONNECTED\n", ck_a, True)
 
-        start_new_thread(createClientConnection, (client_socket, client_id, ck_a))
+        start_new_thread(createClientConnection, (client_id, ))
 
     else:
         print("* Client is not in the subscriber list.")
