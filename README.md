@@ -15,4 +15,7 @@ Coming up: accepting multiple clients with the server.
 **In process:**
 - Log off error check
 - History
-- Encryption.py
+
+**NOTE:**
+The curses module is not supported on Windows machines. While curses is most widely used in the Unix environment, versions are available for DOS, OS/2, and possibly other systems as well. This extension module is designed to match the API of ncurses, an open-source curses library hosted on Linux and the BSD variants of Unix.
+To use curses module on Windows machines, simply install the library by pip install windows-curses.
