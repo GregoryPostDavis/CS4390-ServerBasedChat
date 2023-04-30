@@ -79,13 +79,21 @@ def createClientConnection(client_id):
 #####################################################
 
 # predefined variables
-subscriber_list = [('clientA', [100, 5678]),('clientB', [200, 4567]),('clientC', [300, 3456])]
+subscriber_list = []
+numA = 100
+numB = 2000
+for i in range(10): # for 10 default clients
+    client_name = f'client{chr(ord("A")+i)}'
+    subscriber_list.append((client_name, [numA, numB]))
+    numA += 100
+    numB += 10
 subscriber_search = dict(subscriber_list)
 connection_list = [] # (client_id, [client_socket, tcp_socket])
 connection_search = dict(connection_list)
 cka_list = [] # (client_id, ck_a)
 cka_search = dict(cka_list)
 session_list = [] # (session_id, clientA, clientB)
+print(subscriber_list)
 
 # UDP socket creation
 IP = '127.0.0.1'
