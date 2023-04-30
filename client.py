@@ -23,8 +23,10 @@ def tcpreceive(tcp_socket, ck_a, bool):
         print("Server: ", message) # receiving messages from the server
     else:
         if "UNREACHABLE" in message:
+            print("Server: ", message)
             print("\n* Correspondent unreachable\n")
         elif "CHAT_STARTED" in message:
+            print("Server: ", message)
             print("\n* Chat starting")
         else:
             print(message) # receiving messages from another user
@@ -49,7 +51,6 @@ def chatreceive(tcp_socket, ck_a):
                 print("\n* Chat ended\n")
                 chat_initiator = False
                 chat_receiver = False
-                return
         except socket.error:
             return
 
@@ -117,17 +118,18 @@ while True:
                 tcpreceive(tcp_socket, ck_a, True) # Protocol: receive CONNECTED
                 print("Commands:\n1. Log off: to log off and end connection with the server\n2. Chat (client-ID): to start a chat with another user\n3. End Chat: to end a current chat\n4. History (client-ID): check your past chat messaged exchanged with another user\n")
 
+                start_new_thread(chatreceive, (tcp_socket, ck_a)) # receive messages
+
                 while True:
-                    start_new_thread(chatreceive, (tcp_socket, ck_a)) # receive messages
 
                     if chat_receiver == True:
                         tcpsend(tcp_socket, f"CHAT_CHECK({session_id}, {target_id})", ck_a) # arbitrary protocol: send CHAT_CHECK(session_id, target_id)
                         chat_receiver = False
 
-                    msg = input("") # Send messages
+                    msg = input() # Send messages
 
                     # message check
-                    if msg.strip().lower().startswith('chat'):
+                    if msg.strip().lower().startswith('chat '):
                         target = msg.split(" ")[1]
                         tcpsend(tcp_socket, f"CHAT_REQUEST({target})", ck_a) # Protocol: send CHAT_REQUEST(client_id)
                         print(f"You: CHAT_REQUEST({target})") 
@@ -151,4 +153,4 @@ tcp_socket.close()
 print("* TCP connection closed.")
 
 udp_socket.close()
-print("* UDP connection closed.")
+print("* UDP connection closed.\n")

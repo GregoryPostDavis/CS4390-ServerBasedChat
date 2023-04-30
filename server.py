@@ -26,58 +26,62 @@ def tcpreceive(client_socket, client_id, ck_a):
 
 def chat(client_id, target_id, session_id):
     while True: # chat starts
-        msg = tcpreceive(connection_search[client_id], client_id, cka_search[client_id])
+        msg = tcpreceive(connection_search[client_id][0], client_id, cka_search[client_id])
         if "END_REQUEST" in msg: # protocol: receive END_REQUEST(session-id)
-            tcpsend(connection_search[target_id], f"END_NOTIF({session_id})", cka_search[target_id], True) # protocol: send END_NOTIF(session-id)
+            tcpsend(connection_search[target_id][0], f"END_NOTIF({session_id})", cka_search[target_id], True) # protocol: send END_NOTIF(session-id)
             return
         elif "END_CHECK" in msg:
             return
-        tcpsend(connection_search[target_id], f"{client_id}: {msg}", cka_search[target_id], False) # echo the message to the target
+        tcpsend(connection_search[target_id][0], f"{client_id}: {msg}", cka_search[target_id], False) # echo the message to the target
 
 def createClientConnection(client_id):
-    global connection_search
+    global connection_search, session_list
 
     print(f"* Accepting {client_id}'s messages...\n")
 
     while True:
-        try:
-            msg = tcpreceive(connection_search[client_id], client_id, cka_search[client_id])
-            if "CHAT_REQUEST" in msg: # Protocol: CHAT_REQUEST(client-id)
-                target_id = msg[13:-1]
-                find = [item for item in session_list if target_id in item]
-                if target_id in connection_search and len(find) == 0:
-                    time = datetime.now()
-                    session_id = time.strftime("%Y%m%d%H%M%S") # implementing session id
+        msg = tcpreceive(connection_search[client_id][0], client_id, cka_search[client_id])
+        if "CHAT_REQUEST" in msg: # Protocol: CHAT_REQUEST(client-id)
+            target_id = msg[13:-1]
+            find = [item for item in session_list if target_id in item]
+            if target_id in connection_search and len(find) == 0:
+                time = datetime.now()
+                session_id = time.strftime("%Y%m%d%H%M%S") # implemesnting session id
 
-                    tcpsend(connection_search[client_id], f"CHAT_STARTED({session_id}, {target_id})", cka_search[client_id], True) # Protocol: send CHAT_STARTED(session_id, client_id)
-                    tcpsend(connection_search[target_id], f"CHAT_STARTED({session_id}, {client_id})", cka_search[target_id], True)
-                    session_list.append((session_id, client_id, target_id))
+                tcpsend(connection_search[client_id][0], f"CHAT_STARTED({session_id}, {target_id})", cka_search[client_id], True) # Protocol: send CHAT_STARTED(session_id, client_id)
+                tcpsend(connection_search[target_id][0], f"CHAT_STARTED({session_id}, {client_id})", cka_search[target_id], True)
+                session_list.append((session_id, client_id, target_id))
 
-                    chat(client_id, target_id, session_id)
-                    session_list.remove((session_id, client_id, target_id))
-                else:
-                    tcpsend(connection_search[client_id], f"UNREACHABLE({target_id})", cka_search[client_id], True) # Protocol: send UNREACHABLE(client_id)
-            elif "CHAT_CHECK" in msg:
-                session_id = msg[11:-1].split(",")[0]
-                target_id = msg[11:-1].split(",")[1].strip()
                 chat(client_id, target_id, session_id)
+                session_list.remove((session_id, client_id, target_id))
+            else:
+                tcpsend(connection_search[client_id][0], f"UNREACHABLE({target_id})", cka_search[client_id], True) # Protocol: send UNREACHABLE(client_id)
+        elif "CHAT_CHECK" in msg:
+            session_id = msg[11:-1].split(",")[0]
+            target_id = msg[11:-1].split(",")[1].strip()
+            chat(client_id, target_id, session_id)
 
-            if msg.strip().lower() == "log off":
-                print("logging off...\n")
-                break
-        except OSError:
-            continue
+        if msg.strip().lower() == "log off":
+            print(f"logging off {client_id}...\n")
+            break
 
-    client_socket.close()
-    tcp_socket.close()
-    print("* TCP connection closed.\n")
+    connection_search[client_id][0].close() # client_socket close
+    connection_search[client_id][1].close() # tcp_socket close
+    print(f"* TCP connection for {client_id} closed.\n")
+
+    for clients in connection_list:
+        if clients[0] == client_id:
+            connection_list.remove(clients)
+    connection_search = dict(connection_list)
+
+    return
 
 #####################################################
 
 # predefined variables
 subscriber_list = [('clientA', [100, 5678]),('clientB', [200, 4567]),('clientC', [300, 3456])]
 subscriber_search = dict(subscriber_list)
-connection_list = [] # (client_id, client_socket)
+connection_list = [] # (client_id, [client_socket, tcp_socket])
 connection_search = dict(connection_list)
 cka_list = [] # (client_id, ck_a)
 cka_search = dict(cka_list)
@@ -125,7 +129,7 @@ while True:
             tcp_socket.listen()
             client_socket, address = tcp_socket.accept() # Returns client socket and address
             print(f"\n* TCP socket bound to {TCP_PORT}\n")
-            connection_list.append((client_id, client_socket))
+            connection_list.append((client_id, [client_socket, tcp_socket]))
             connection_search = dict(connection_list)
 
             # TCP Socket
