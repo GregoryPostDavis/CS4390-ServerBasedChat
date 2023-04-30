@@ -15,4 +15,3 @@ Coming up: accepting multiple clients with the server.
 **In process:**
 - Log off error check
 - History
-- Encryption.py
