@@ -5,6 +5,7 @@ import encryption
 import chatHistory
 import os.path
 from datetime import datetime
+import time
 
 def udpsend(udp_socket, client_address, message):
     udp_socket.sendto(message.encode(), client_address)
@@ -43,6 +44,7 @@ def chat(client_id, target_id, session_id, filename):
                             lines = chatHistory.readhistory(filename)
                             for line in lines:
                                 tcpsend(connection_search[client_id][0], line , cka_search[client_id], False)
+                                time.sleep(0.01)
                         else:
                             print("CHAT LOG DOES NOT EXIST")
                             tcpsend(connection_search[client_id][0], "SERVER: CHAT HISTORY DOES NOT EXIST YET!" , cka_search[client_id], False)
@@ -76,7 +78,7 @@ def createClientConnection(client_id):
             if target_id in connection_search and len(find) == 0:
                 time = datetime.now()
                 session_id = time.strftime("%Y%m%d%H%M%S") # implementing session id
-                filename = authentication.simple_hash(encryption.encrypt_msg(client_id, target_id)) # GENERATES CHAT HISTORY FILE NAME
+                filename = session_id # GENERATES CHAT HISTORY FILE NAME
 
                 tcpsend(connection_search[client_id][0], f"CHAT_STARTED({session_id}, {target_id})", cka_search[client_id], True) # Protocol: send CHAT_STARTED(session_id, client_id)
                 tcpsend(connection_search[target_id][0], f"CHAT_STARTED({session_id}, {client_id})", cka_search[target_id], True)
@@ -89,7 +91,7 @@ def createClientConnection(client_id):
         elif "CHAT_CHECK" in msg:
             session_id = msg[11:-1].split(",")[0]
             target_id = msg[11:-1].split(",")[1].strip()
-            filename = authentication.simple_hash(encryption.encrypt_msg(client_id, target_id)) # GENERATES CHAT HISTORY FILE NAME
+            filename = session_id # GENERATES CHAT HISTORY FILE NAME
             chat(client_id, target_id, session_id, filename)
 
         if msg.strip().lower() == "log off":
