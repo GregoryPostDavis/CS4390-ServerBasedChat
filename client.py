@@ -2,7 +2,6 @@ from _thread import *
 import socket
 import authentication
 import encryption
-import curses
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -131,7 +130,7 @@ while True:
                     # message check
                     if msg.strip().lower().startswith('chat '):
                         target = msg.split(" ")[1]
-                        tcpsend(tcp_socket, f"CHAT_REQUEST({target})", ck_a) # Protocol: send CHAT_REQUEST(client_id)
+                        tcpsend(tcp_socket, f"CHAT_REQUEST({target})", ck_a) # Protocol: send CHAT_REQUEST(client_ID)
                         print(f"You: CHAT_REQUEST({target})") 
                         chat_initiator = True # initiator
                     elif msg.strip().lower().startswith('end chat'):
@@ -140,6 +139,9 @@ while True:
                         chat_initiator = False
                         chat_receiver = False
                         print("\n* Chat ended\n")
+                    elif msg.strip().lower().startswith('history '):
+                        target = msg.split(" ")[1]
+                        tcpsend(tcp_socket, f"HISTORY_REQ({target})", ck_a) # Protocol: send HISTORY_REQ(client_ID)
                     elif msg.strip().lower() == "log off":
                         tcpsend(tcp_socket, msg, ck_a)
                         stop_listening = True
