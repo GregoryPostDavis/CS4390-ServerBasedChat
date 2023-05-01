@@ -2,6 +2,8 @@ from _thread import *
 import socket
 import authentication
 import encryption
+import chatHistory
+import os.path
 from datetime import datetime
 
 def udpsend(udp_socket, client_address, message):
@@ -24,21 +26,48 @@ def tcpreceive(client_socket, client_id, ck_a):
     print(f"{client_id}: " + message)
     return message
 
-def chat(client_id, target_id, session_id):
+def chat(client_id, target_id, session_id, filename):
     while True: # chat starts
         msg = tcpreceive(connection_search[client_id][0], client_id, cka_search[client_id])
-        if "END_REQUEST" in msg: # protocol: receive END_REQUEST(session-id)
+        if "HISTORY_REQUEST" in msg: # PROTOCOL: HISTORY_REQUEST(client-id)
+            target_id = msg[16:-1]
+
+            for item in session_list:
+                if session_id == item[0]: # FIND TUPLE THAT HAS session_id
+                    if target_id in item: # FIND targert_id WITHIN THAT TULE
+                        if target_id == client_id: 
+                            tcpsend(connection_search[client_id][0], "SERVER: CANNOT SEND CHAT HISTORY TO YOURSELF!" , cka_search[client_id], False)
+                            break
+                        if os.path.isfile(filename): # CHECKS IF CHAT HISTORY LOG EXISTS
+                            print("CHAT LOG EXIST")
+                            lines = chatHistory.readhistory(filename)
+                            for line in lines:
+                                tcpsend(connection_search[client_id][0], line , cka_search[client_id], False)
+                        else:
+                            print("CHAT LOG DOES NOT EXIST")
+                            tcpsend(connection_search[client_id][0], "SERVER: CHAT HISTORY DOES NOT EXIST YET!" , cka_search[client_id], False)
+                    else:
+                        msg = "SERVER: YOU ARE NOT IN SEESION WITH <" + target_id +  ">!"
+                        tcpsend(connection_search[client_id][0], msg , cka_search[client_id], False)
+        
+        elif "END_REQUEST" in msg: # protocol: receive END_REQUEST(session-id)
             tcpsend(connection_search[target_id][0], f"END_NOTIF({session_id})", cka_search[target_id], True) # protocol: send END_NOTIF(session-id)
             return
+        
         elif "END_CHECK" in msg:
             return
-        tcpsend(connection_search[target_id][0], f"{client_id}: {msg}", cka_search[target_id], False) # echo the message to the target
+
+        elif msg:
+            chatHistory.write(session_id, filename, client_id, msg)  # ADDS CHAT TO HISTORY
+            tcpsend(connection_search[target_id][0], f"{client_id}: {msg}", cka_search[target_id], False) # echo the message to the target
+            
 
 def createClientConnection(client_id):
     global connection_search, session_list
 
     print(f"* Accepting {client_id}'s messages...\n")
 
+    # Receive messages
     while True:
         msg = tcpreceive(connection_search[client_id][0], client_id, cka_search[client_id])
         if "CHAT_REQUEST" in msg: # Protocol: CHAT_REQUEST(client-id)
@@ -46,20 +75,22 @@ def createClientConnection(client_id):
             find = [item for item in session_list if target_id in item]
             if target_id in connection_search and len(find) == 0:
                 time = datetime.now()
-                session_id = time.strftime("%Y%m%d%H%M%S") # implemesnting session id
+                session_id = time.strftime("%Y%m%d%H%M%S") # implementing session id
+                filename = authentication.simple_hash(encryption.encrypt_msg(client_id, target_id)) # GENERATES CHAT HISTORY FILE NAME
 
                 tcpsend(connection_search[client_id][0], f"CHAT_STARTED({session_id}, {target_id})", cka_search[client_id], True) # Protocol: send CHAT_STARTED(session_id, client_id)
                 tcpsend(connection_search[target_id][0], f"CHAT_STARTED({session_id}, {client_id})", cka_search[target_id], True)
                 session_list.append((session_id, client_id, target_id))
 
-                chat(client_id, target_id, session_id)
+                chat(client_id, target_id, session_id, filename)
                 session_list.remove((session_id, client_id, target_id))
             else:
                 tcpsend(connection_search[client_id][0], f"UNREACHABLE({target_id})", cka_search[client_id], True) # Protocol: send UNREACHABLE(client_id)
         elif "CHAT_CHECK" in msg:
             session_id = msg[11:-1].split(",")[0]
             target_id = msg[11:-1].split(",")[1].strip()
-            chat(client_id, target_id, session_id)
+            filename = authentication.simple_hash(encryption.encrypt_msg(client_id, target_id)) # GENERATES CHAT HISTORY FILE NAME
+            chat(client_id, target_id, session_id, filename)
 
         if msg.strip().lower() == "log off":
             print(f"logging off {client_id}...\n")

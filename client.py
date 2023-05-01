@@ -140,6 +140,9 @@ while True:
                         chat_initiator = False
                         chat_receiver = False
                         print("\n* Chat ended\n")
+                    elif msg.strip().lower().startswith('history'):
+                        target = msg.split(" ")[1]
+                        tcpsend(tcp_socket, f"HISTORY_REQUEST({target})", ck_a) # PROTOCOL: SEND HISTORY_REQUEST(client_id)
                     elif msg.strip().lower() == "log off":
                         tcpsend(tcp_socket, msg, ck_a)
                         stop_listening = True

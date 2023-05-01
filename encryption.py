@@ -30,7 +30,7 @@ def encrypt_msg(ck_a, msg):
     length = len(msg)
     
     for i in range(length):
-        cipher_key_i = cipher_key[i % len(cipher_key)]       # HANDLES THE CASE WHERE THE LENGTH OF CK_A IS SHORTER THAN MSG BY TAKING THE MODULUS OF THE CURRENT INDEX WITH THE LENGTH OF CK_A
+        cipher_key_i = cipher_key[i % len(cipher_key)]      # HANDLES THE CASE WHERE THE LENGTH OF CK_A IS SHORTER THAN MSG BY TAKING THE MODULUS OF THE CURRENT INDEX WITH THE LENGTH OF CK_A
         msg = (msg[:i] +
                    chr(ord(msg[i]) ^ ord(cipher_key_i)) +
                        msg[i + 1:]) 

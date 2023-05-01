@@ -33,3 +33,9 @@ def check_hash(xres, res):
         return 1
     else:                                               # AUTH FAIL
         return 0
+
+# FUNCTION FOR GENERAL PURPOSE HASHING
+def simple_hash(input):
+    res = hashlib.sha1(input.encode())
+
+    return res.hexdigest()
