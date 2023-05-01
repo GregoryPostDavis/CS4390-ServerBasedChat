@@ -2,7 +2,6 @@ from _thread import *
 import socket
 import authentication
 import encryption
-import curses
 
 def udpsend(udp_socket, server_address, message):
     udp_socket.sendto(message.encode(), server_address)
@@ -22,22 +21,36 @@ def tcpreceive(tcp_socket, ck_a, bool):
     if bool:
         print("Server: ", message) # receiving messages from the server
     else:
-        print(message) # receiving messages from another user
+        if "UNREACHABLE" in message:
+            print("Server: ", message)
+            print("\n* Correspondent unreachable\n")
+        elif "CHAT_STARTED" in message:
+            print("Server: ", message)
+            print("\n* Chat starting")
+        else:
+            print(message) # receiving messages from another user
     return message, server_address
 
 def chatreceive(tcp_socket, ck_a):
-    global session_id, target_id, flag1
+    global session_id, target_id, chat_initiator, chat_receiver, stop_listening
     
-    while True:
-        msg, __ = tcpreceive(tcp_socket, ck_a, False)
-        if "CHAT_STARTED" in msg: # Protocol: receive CHAT_STARTED(session_id, client_id)
-           session_id = msg[13:-1].split(",")[0]
-           target_id = msg[13:-1].split(",")[1]
-           if flag2 == False:
-               print("\n* Press enter to initiate chat.")
-               flag1 = True # non-initiator
-        if "END_NOTIF" in msg:
-            print("\n* Chat ended\n")
+    while not stop_listening:
+        try:
+            msg, __ = tcpreceive(tcp_socket, ck_a, False)
+            if "CHAT_STARTED" in msg: # Protocol: receive CHAT_STARTED(session_id, client_id)
+                session_id = msg[13:-1].split(",")[0]
+                target_id = msg[13:-1].split(",")[1]
+                if chat_initiator == False:
+                    print("* Press enter to initiate chat.")
+                    chat_receiver = True # non-initiator
+                else:
+                    print()
+            if "END_NOTIF" in msg:
+                tcpsend(tcp_socket, f"END_CHECK({session_id})", ck_a) # arbitrary protocol: send END_CHECK(session_id)
+                print("\n* Chat ended\n")
+                chat_initiator = False
+                chat_receiver = False
+        except socket.error:
             return
 
 #####################################################
@@ -45,8 +58,9 @@ def chatreceive(tcp_socket, ck_a):
 # predefined variables
 session_id = None
 target_id = None
-flag1 = False
-flag2 = False
+chat_receiver = False # flag
+chat_initiator = False # flag
+stop_listening = False # flag
 
 # UDP socket creation
 IP = '127.0.0.1'
@@ -74,58 +88,71 @@ while True:
         # Authentication
         response, server_address = udpreceive(udp_socket) # Protocol: receive CHALLENGE(rand)
         challenge_message = response.decode()
-        challenge_message = challenge_message[10:-1] # Extract rand
+        if challenge_message != "Not on subscriber list.\n":
+            challenge_message = challenge_message[10:-1] # Extract rand
 
-        res = authentication.client_hash(challenge_message, secret_key)
-        udpsend(udp_socket, server_address, f"RESPONSE({client_id}, {res})") # Protocol: send RESPONSE(res)
+            res = authentication.client_hash(challenge_message, secret_key)
+            udpsend(udp_socket, server_address, f"RESPONSE({client_id}, {res})") # Protocol: send RESPONSE(res)
 
-        ck_a = encryption.cipher_key(challenge_message, secret_key)
-        #print("\nCK_A: %s" %(ck_a))                                    # - DEBUG
+            response, server_address = udp_socket.recvfrom(1024) # server response
+            response = response.decode()
 
-        response, server_address = udp_socket.recvfrom(1024)
-        response = encryption.decrypt_msg(response.decode(), ck_a)
-        print("Server: " + response) # Protocol: receive AUTH_SUCCESS(rand_cookie, port_number)
-
-        RAND_COOKIE = response[13:-7] # Extract cookie
-        TCP_PORT = int(response[-5:-1]) # Extract tcp port number
-        
-        # TCP Socket establishment
-        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_socket.connect((IP, TCP_PORT))
-        print("\n* TCP socket created\n")                               # - DEBUG
-
-        tcpsend(tcp_socket, f"CONNECT({RAND_COOKIE})", ck_a) # Protocol: send CONNECT(rand_cookie)
-        tcpreceive(tcp_socket, ck_a, True) # Protocol: receive CONNECTED
-        print("Commands:\n1. Log off: to log off and end connection with the server\n2. Chat (client-ID): to start a chat with another user\n3. End Chat: to end a current chat\n4. History (client-ID): check your past chat messaged exchanged with another user\n")
-
-        while True:
-            start_new_thread(chatreceive, (tcp_socket, ck_a)) # receive messages
-
-            if flag1 == True:
-                tcpsend(tcp_socket, f"CHAT_CHECK({session_id}, {target_id})", ck_a) # arbitrary protocol: send CHAT_CHECK(session_id, target_id)
-                flag1 = False
-
-            msg = input("") # Send messages
-
-            # message check
-            if msg.strip().lower().startswith('chat'):
-                target = msg.split(" ")[1]
-                tcpsend(tcp_socket, f"CHAT_REQUEST({target})", ck_a) # Protocol: send CHAT_REQUEST(client_id)
-                print(f"You: CHAT_REQUEST({target})") 
-                flag2 = True # initiator
-            elif msg.strip().lower().startswith('end chat'):
-                tcpsend(tcp_socket, f"END_REQUEST({session_id})", ck_a) # Protocol: send END_REQUEST(session_ID)
-                print("\n* Chat ended\n")
-                break
-            elif msg.strip().lower() == "log off":
-                print("Logging off...\n")
-                break
+            if response == "AUTH_FAIL":
+                print("Server: " + response)
+                print("Wrong secret code.\n")
             else:
-                tcpsend(tcp_socket, msg, ck_a)
-        break
+                ck_a = encryption.cipher_key(challenge_message, secret_key)
+                response = encryption.decrypt_msg(response, ck_a)
+                print("Server: " + response) # Protocol: receive AUTH_SUCCESS(rand_cookie, port_number)
+
+                RAND_COOKIE = response[13:-7] # Extract cookie
+                TCP_PORT = int(response[-5:-1]) # Extract tcp port number
+                
+                # TCP Socket establishment
+                tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcp_socket.connect((IP, TCP_PORT))
+                print("\n* TCP socket created\n")                               # - DEBUG
+
+                tcpsend(tcp_socket, f"CONNECT({RAND_COOKIE})", ck_a) # Protocol: send CONNECT(rand_cookie)
+                tcpreceive(tcp_socket, ck_a, True) # Protocol: receive CONNECTED
+                print("Commands:\n1. Log off: to log off and end connection with the server\n2. Chat (client-ID): to start a chat with another user\n3. End Chat: to end a current chat\n4. History (client-ID): check your past chat messaged exchanged with another user\n")
+
+                start_new_thread(chatreceive, (tcp_socket, ck_a)) # receive messages
+
+                while True:
+
+                    if chat_receiver == True:
+                        tcpsend(tcp_socket, f"CHAT_CHECK({session_id}, {target_id})", ck_a) # arbitrary protocol: send CHAT_CHECK(session_id, target_id)
+                        chat_receiver = False
+
+                    msg = input() # Send messages
+
+                    # message check
+                    if msg.strip().lower().startswith('chat '):
+                        target = msg.split(" ")[1]
+                        tcpsend(tcp_socket, f"CHAT_REQUEST({target})", ck_a) # Protocol: send CHAT_REQUEST(client_ID)
+                        print(f"You: CHAT_REQUEST({target})") 
+                        chat_initiator = True # initiator
+                    elif msg.strip().lower().startswith('end chat'):
+                        tcpsend(tcp_socket, f"END_REQUEST({session_id})", ck_a) # Protocol: send END_REQUEST(session_ID)
+                        print(f"You: END_REQUEST({session_id})")
+                        chat_initiator = False
+                        chat_receiver = False
+                        print("\n* Chat ended\n")
+                    elif msg.strip().lower().startswith('history '):
+                        target = msg.split(" ")[1]
+                        tcpsend(tcp_socket, f"HISTORY_REQ({target})", ck_a) # Protocol: send HISTORY_REQ(client_ID)
+                    elif msg.strip().lower() == "log off":
+                        tcpsend(tcp_socket, msg, ck_a)
+                        stop_listening = True
+                        print("Logging off...\n")
+                        break
+                    else:
+                        tcpsend(tcp_socket, msg, ck_a)
+                break
 
 tcp_socket.close()
 print("* TCP connection closed.")
 
 udp_socket.close()
-print("* UDP connection closed.")
+print("* UDP connection closed.\n")
