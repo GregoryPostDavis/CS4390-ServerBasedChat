@@ -120,6 +120,9 @@ while True:
                 tcpsend(tcp_socket, f"END_REQUEST({session_id})", ck_a) # Protocol: send END_REQUEST(session_ID)
                 print("\n* Chat ended\n")
                 break
+            elif msg.strip().lower().startswith('history'):
+                target = msg.split(" ")[1]
+                tcpsend(tcp_socket, f"HISTORY_REQUEST({target})", ck_a) # PROTOCOL: SEND HISTORY_REQUEST(client_id)
             elif msg.strip().lower() == "log off":
                 print("Logging off...\n")
                 break
